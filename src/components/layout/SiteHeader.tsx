@@ -19,7 +19,7 @@ export function SiteHeader({ user, wide = false }: { user: CurrentUser; wide?: b
           user.role ? (
             <>
               <NavLink href="/">Reports</NavLink>
-              {hasRole(user.role, "admin") && <NavLink href="/members">Members</NavLink>}
+              {hasRole(user.role, "admin") && <NavLink href="/members">Users</NavLink>}
             </>
           ) : undefined
         }
@@ -31,6 +31,12 @@ export function SiteHeader({ user, wide = false }: { user: CurrentUser; wide?: b
               </StatusBadge>
             )}
             <UserBadge name={user.name}>
+              <Link
+                href="/account/password"
+                className="text-xs uppercase tracking-[0.08em] text-ink-dark hover:text-brand-black underline decoration-brand-yellow underline-offset-4"
+              >
+                Password
+              </Link>
               <form action={signOutAction}>
                 <button
                   type="submit"

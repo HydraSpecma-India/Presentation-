@@ -31,8 +31,14 @@ Checks: `npm run lint && npm run typecheck && npm test && npm run build`.
 
 ## Access
 
-Sign-in is email + password for @hydraspecma.com addresses. Being signed in is not enough: an
-admin adds people on **Members** (viewer, editor or admin). The database enforces this.
+There is **no self sign-up**. An admin creates each account on the **Users** page (work email,
+name, role, temporary password) and hands over the temporary password. At first sign-in the user
+must choose their own password. Roles: viewer (open, export), editor (also create and change),
+admin (also delete reports and manage users). The database enforces all of this.
+
+If the person already has a login from another app in the same Supabase project, the app only
+grants access and keeps their existing password. Admins can reset passwords only for accounts
+this app created; everyone else uses "Forgot password".
 
 ## Supabase settings (dashboard, one-time)
 
@@ -42,7 +48,9 @@ Authentication → URL Configuration:
 - **Redirect URLs:** add `https://management-report-builder.vercel.app/auth/callback` and
   `http://localhost:3000/auth/callback`
 
-Without these, links in confirmation and password-reset emails open `localhost`.
+Without these, links in password-reset emails open `localhost`. Public sign-up stays enabled
+in Supabase because other apps in the project use it; this app has no sign-up screen, and a
+login without a member entry gets no access.
 
 ## Moving to Microsoft Entra sign-in later
 

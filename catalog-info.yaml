@@ -1,0 +1,28 @@
+# Backstage catalog entry. Options: backstage/catalog-info.reference.yaml in webdev-coding-templates.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: management-report-builder
+  title: Management Report Builder
+  description: Builds the HSIN board meeting management report page by page and exports it to PowerPoint in the HySp board report format.
+  tags:
+    - nextjs
+    - supabase
+    - vercel
+  annotations:
+    backstage.io/source-location: url:https://github.com/HydraSpecma-India/Presentation-/tree/main/
+spec:
+  type: website
+  lifecycle: experimental
+  owner: group:SG-Backstage-CitizenDevelopers
+  productOwner: user:default/manigandan.parthasarathi_hydraspecma.com
+  applicationRoles:
+    - name: Viewer
+      description: Can open and export reports.
+      entraGroup: none (public.mr_members role "viewer")
+    - name: Editor
+      description: Can create, duplicate and change reports.
+      entraGroup: none (public.mr_members role "editor")
+    - name: Admin
+      description: Can delete reports and manage members.
+      entraGroup: none (public.mr_members role "admin")

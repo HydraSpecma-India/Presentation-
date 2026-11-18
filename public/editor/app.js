@@ -86,9 +86,16 @@ window.HSEditor = { mount: function (opts) {
     var list = $('#slist'); list.innerHTML = '';
     var inc = P.slides.filter(function (s) { return s.include; }).length;
     $('#meta').textContent = inc + ' of ' + P.slides.length + ' slides will be exported';
+    var secs = C.sectionsFor(P.slides), lastSec = null;
     P.slides.forEach(function (s, i) {
       var name = s.layout === 'cover' ? (s.subtitle || 'Cover') : (s.title || 'Untitled');
-      if (q && name.toLowerCase().indexOf(q) < 0) return;
+      var sec = secs[i].section;
+      if (q && name.toLowerCase().indexOf(q) < 0 && sec.toLowerCase().indexOf(q) < 0) return;
+      if (sec !== lastSec) {
+        lastSec = sec;
+        list.appendChild(sectionHeader(sec, secs));
+      }
+      if (!q && collapsed[sec] && s.id !== cur) return;
       var pg = pageNo(s);
       var cb = el('input', { type: 'checkbox', title: s.include ? 'Included – untick to remove from the export' : 'Excluded – tick to include', onclick: function (e) { e.stopPropagation(); s.include = cb.checked; changed('struct'); } });
       cb.checked = !!s.include;
@@ -105,6 +112,30 @@ window.HSEditor = { mount: function (opts) {
       ]);
       list.appendChild(item);
     });
+  }
+  /* Category headers in the page list: name, included/total count, click to fold. */
+  var collapsed = {};
+  function sectionHeader(sec, secs) {
+    var all = secs.filter(function (x) { return x.section === sec; });
+    var on = all.filter(function (x) { return x.slide.include; }).length;
+    var allOn = on === all.length;
+    var cb = el('input', { type: 'checkbox', title: allOn ? 'Untick to leave this whole category out' : 'Tick to include the whole category', onclick: function (e) {
+      e.stopPropagation(); all.forEach(function (x) { x.slide.include = cb.checked; }); changed('struct');
+    } });
+    cb.checked = allOn; cb.indeterminate = on > 0 && !allOn;
+    return el('div', { class: 'sh' + (collapsed[sec] ? ' folded' : ''), title: collapsed[sec] ? 'Show pages' : 'Hide pages', onclick: function () { collapsed[sec] = !collapsed[sec]; renderSide(); } }, [
+      cb, el('span', { class: 'arw', text: collapsed[sec] ? '▸' : '▾' }), el('span', { class: 'nm', text: sec }), el('span', { class: 'cnt', text: on + '/' + all.length })
+    ]);
+  }
+  function sectionList() {
+    var seen = {}, out = [];
+    C.sectionsFor(P.slides).forEach(function (x) { if (!seen[x.section]) { seen[x.section] = true; out.push(x.section); } });
+    return out;
+  }
+  function currentSection() {
+    var i = P.slides.findIndex(function (s) { return s.id === cur; });
+    var secs = C.sectionsFor(P.slides);
+    return i >= 0 ? secs[i].section : (secs.length ? secs[secs.length - 1].section : 'Other');
   }
   function move(i, d) {
     var j = i + d; if (j < 0 || j >= P.slides.length) return;
@@ -497,8 +528,15 @@ window.HSEditor = { mount: function (opts) {
       pn.appendChild(el('div', { class: 'sec help', html: 'Select a box on the slide (or in the list above) to edit its text, table, chart data or image.<br><br>Prefer filling everything page by page? Switch to <b>Page-wise entry</b> at the top.' }));
     }
   }
+  function categoryField(s) {
+    var id = 'secs-' + s.id;
+    var i = el('input', { type: 'text', value: C.sectionOf(s, ''), list: id, placeholder: 'e.g. Sales' });
+    i.addEventListener('input', function () { s.section = i.value; changed('title'); });
+    var dl = el('datalist', { id: id }, sectionList().map(function (x) { return el('option', { value: x }); }));
+    return el('div', { class: 'fld' }, [el('label', { text: 'Category (PowerPoint section)' }), i, dl]);
+  }
   function slideFields(s, compact) {
-    var out = [];
+    var out = [categoryField(s)];
     if (s.layout === 'cover') {
       out.push(fld('Subtitle', tInput(s, 'subtitle', 'title')));
       out.push(el('div', { class: 'row' }, [fld('Presenter', tInput(s, 'presenter', 'x')), fld('Date', tInput(s, 'date', 'x'))]));
@@ -808,7 +846,12 @@ window.HSEditor = { mount: function (opts) {
   function renderEntry() {
     var host = $('#entry'), keep = host.scrollTop; host.innerHTML = '';
     host.appendChild(el('div', { class: 'help entry-intro', html: '<b>Page-wise entry:</b> every page of the report in order, with its header. Type comments, paste table/chart data from Excel, and drop or paste images into each slot. Untick a page to leave it out of the PowerPoint. Click the thumbnail to open that slide in the visual editor.' }));
-    P.slides.forEach(function (s) {
+    var esecs = C.sectionsFor(P.slides), elast = null;
+    P.slides.forEach(function (s, si) {
+      if (esecs[si].section !== elast) {
+        elast = esecs[si].section;
+        host.appendChild(el('h2', { class: 'esec', text: elast }));
+      }
       var pg = pageNo(s);
       var inc = el('input', { type: 'checkbox', title: 'Include in PowerPoint' }); inc.checked = s.include;
       inc.addEventListener('change', function () { s.include = inc.checked; changed('struct'); });
@@ -916,7 +959,8 @@ window.HSEditor = { mount: function (opts) {
   $('#bAddSlide').onclick = function () {
     var box = el('div');
     var pos = P.slides.findIndex(function (s) { return s.id === cur; });
-    function add(s) { s.include = true; P.slides.splice(pos + 1, 0, s); cur = s.id; sel = null; changed('struct'); renderAll(); closeModal(); }
+    var curSec = currentSection();
+    function add(s, keepTemplateSection) { s.include = true; if (!keepTemplateSection || !s.section) s.section = curSec; P.slides.splice(pos + 1, 0, s); cur = s.id; sel = null; changed('struct'); renderAll(); closeModal(); }
     box.appendChild(el('div', { class: 'lab', style: 'margin-bottom:6px', text: 'Basic layouts (inserted after the current slide)' }));
     var basics = el('div', { class: 'tplList', style: 'max-height:none;margin-bottom:14px' });
     [
@@ -931,7 +975,7 @@ window.HSEditor = { mount: function (opts) {
     box.appendChild(el('div', { class: 'lab', style: 'margin-bottom:6px', text: 'Pages from the board report template (fresh, empty copy)' }));
     var tl = el('div', { class: 'tplList' });
     C.TEMPLATE().forEach(function (t, i) {
-      tl.appendChild(el('button', { html: '<span style="color:#999">' + (i + 1) + '.</span> ' + esc(t.layout === 'cover' ? 'Cover – ' + t.subtitle : t.title), onclick: function () { add(t); } }));
+      tl.appendChild(el('button', { html: '<span class="tn">' + (i + 1) + '.</span> ' + esc(t.layout === 'cover' ? 'Cover – ' + t.subtitle : t.title) + ' <span class="tn">· ' + esc(t.section || '') + '</span>', onclick: function () { add(t, true); } }));
     });
     box.appendChild(tl);
     ask('Add slide', box, [['Close']]);

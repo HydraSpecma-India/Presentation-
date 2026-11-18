@@ -190,7 +190,7 @@
         ]);
       })(),
       COVER('cover-budget', 'Forecast 2026 & Budget 2027 presentation', 'Presenter name', 'Date'),
-      S('content', 'Content', [T('Content list', 0.8, 1.2, 9, 5.6, '* Budget assumption\n* Upsides & downsides (risk factor for budget 2027)\n* Must Win battles 2027\n* Company KPI’s\n* Budget P&L YTD\n* Budget P&L MTH (Total, REN, IAM)\n* Sales – Bridge\n* EBIT - Bridge\n* CM\n* No of employees\n* CAPEX\n* Cost specification\n* Balance Sheet\n* NWC', 13)], { tag: FB }),
+      S('content', 'Content', [T('Content list', 0.8, 1.2, 9, 5.6, '* Budget assumption\n* Upsides & downsides (risk factor for budget 2027)\n* Must Win battles 2027\n* Company KPI’s\n* Budget P&L YTD\n* Budget P&L MTH (Total, REN)\n* Sales – Bridge\n* EBIT - Bridge\n* CM\n* No of employees\n* CAPEX\n* Cost specification\n* Balance Sheet\n* NWC', 13)], { tag: FB }),
       S('budget-assumption', 'Budget assumption', [T('Assumptions', 0.8, 1.3, 11.8, 5.4, '# The preparation of the 2026 forecast and the 2027 budget was based on the following assumptions:\n* \n* \n* \n* ', 14)], { tag: FB }),
       S('upsides', 'Upsides & downsides', [
         T('Upsides', 1.0, 1.4, 7.4, 2.6, '#g Upsides\nv ', 14),
@@ -223,7 +223,6 @@
       })(),
       monthlyPL('budget-pl-monthly', 'Budget P&L Monthly'),
       monthlyPL('budget-pl-ren', 'Budget P&L Monthly- REN'),
-      monthlyPL('budget-pl-iam', 'Budget P&L Monthly- IAM'),
       (function () {
         var h1 = ['', '', 'Comp. Figures', '', '', '', 'BRIDGE Forecast 2026 --> Budget 2027', '', '', '', '', '', 'Sales growth BU 2027 vs…', '', '', ''];
         var h2 = ['Customer', 'Customer segment', 'Sales 2024', 'Sales 2025', 'Budget 2026', 'Forecast 2026', 'Price Change (INRt)', 'Volume Change (INRt)', 'Moved business (INRt)', 'New Business (INRt)', 'Lost Business (INRt)', 'Budget Sales 2027', 'Change BU27 vs. AC24', 'Change BU27 vs. AC25', 'Change BU27 vs. BU26', 'Change BU27 vs. FC26'];
@@ -348,11 +347,53 @@
       S('resources', 'Necessary Resources', [T('Resources', 0.8, 1.2, 11, 5, '- \n\n- \n\n- \n\n- \n\n- ', 12)]),
       END('end', 'Thanks for your attention')
     ];
-    /* keep left-edge blocks clear of the yellow corner wedge */
+    /* keep left-edge blocks clear of the yellow corner wedge; tag each slide with its category */
     list.forEach(function (sl) {
+      sl.section = SECTION_BY_TPL[sl.tpl] || 'Other';
       (sl.blocks || []).forEach(function (b) { if (b.x < 0.5) { var d = 0.5 - b.x; b.x = 0.5; b.w = +(b.w - d).toFixed(2); } });
     });
     return list;
+  }
+
+  /* ---------- categories (exported as PowerPoint sections) ---------- */
+  var SECTION_BY_TPL = {
+    'cover': 'Opening',
+    'sales-overview': 'Sales', 'sales': 'Sales', 'low-margin': 'Sales',
+    'production': 'Production',
+    'procurement-1': 'Procurement', 'procurement-2': 'Procurement', 'supplier-matrix': 'Procurement',
+    'projects': 'Projects/Engineering',
+    'qhse-1': 'QHSE', 'qhse-2': 'QHSE',
+    'finance': 'Finance',
+    'it': 'IT',
+    'people': 'People & Culture',
+    'strategy-2026': 'Strategy',
+    'cover-finance': 'Financial reporting', 'monthly-report': 'Financial reporting', 'forecast-2026': 'Financial reporting',
+    'cover-budget': 'Forecast 2026 & Budget 2027', 'content': 'Forecast 2026 & Budget 2027', 'budget-assumption': 'Forecast 2026 & Budget 2027',
+    'upsides': 'Forecast 2026 & Budget 2027', 'kpi-1': 'Forecast 2026 & Budget 2027', 'kpi-2': 'Forecast 2026 & Budget 2027',
+    'budget-pl-ytd': 'Forecast 2026 & Budget 2027', 'budget-pl-monthly': 'Forecast 2026 & Budget 2027', 'budget-pl-ren': 'Forecast 2026 & Budget 2027',
+    'budget-pl-iam': 'Forecast 2026 & Budget 2027',
+    'sales-bridge': 'Forecast 2026 & Budget 2027', 'ebit-bridge': 'Forecast 2026 & Budget 2027', 'cm': 'Forecast 2026 & Budget 2027',
+    'employees': 'Forecast 2026 & Budget 2027', 'capex': 'Forecast 2026 & Budget 2027', 'cost-spec-1': 'Forecast 2026 & Budget 2027',
+    'cost-spec-2': 'Forecast 2026 & Budget 2027', 'balance-sheet': 'Forecast 2026 & Budget 2027', 'nwc': 'Forecast 2026 & Budget 2027',
+    'mwb-2027': 'Forecast 2026 & Budget 2027',
+    'new-building': 'New building',
+    'cover-oem': 'OEM status & opportunities', 'potentials': 'OEM status & opportunities', 'top-makers': 'OEM status & opportunities',
+    'oem-finance': 'OEM status & opportunities', 'oem-production': 'OEM status & opportunities', 'oem-projects': 'OEM status & opportunities',
+    'customer-approach': 'OEM status & opportunities', 'customer-install-1': 'OEM status & opportunities',
+    'customer-install-2': 'OEM status & opportunities', 'customer-challenges': 'OEM status & opportunities',
+    'suppliers': 'OEM status & opportunities', 'resources': 'OEM status & opportunities',
+    'end': 'Closing'
+  };
+  /* A slide's category: its own, else its template's, else the previous slide's (reports saved
+     before categories existed get them automatically). */
+  function sectionOf(slide, prev) {
+    var v = slide && typeof slide.section === 'string' ? slide.section.trim() : '';
+    return v || SECTION_BY_TPL[slide && slide.tpl] || prev || 'Other';
+  }
+  /* [{ slide, section }] for every slide, in order. */
+  function sectionsFor(slides) {
+    var prev = '';
+    return slides.map(function (s) { prev = sectionOf(s, prev); return { slide: s, section: prev }; });
   }
 
   /* ---------- helpers ---------- */
@@ -449,11 +490,20 @@
     pptx.author = project.settings.author || 'HydraSpecma India';
     pptx.company = 'HydraSpecma';
     pptx.title = project.settings.reportTitle || 'Management Report';
-    var page = 0;
-    project.slides.forEach(function (s) {
+    var page = 0, lastSec = null, curTitle = null, used = {};
+    sectionsFor(project.slides).forEach(function (item) {
+      var s = item.slide;
       if (!s.include) return;
       page++;
-      var sl = pptx.addSlide();
+      if (item.section !== lastSec) {
+        // PowerPoint matches sections by title, so a category that comes back later gets a suffix.
+        var title = item.section, n = 2;
+        while (used[title]) title = item.section + ' (' + (n++) + ')';
+        used[title] = true; lastSec = item.section;
+        pptx.addSection({ title: title });
+        curTitle = title;
+      }
+      var sl = pptx.addSlide({ sectionTitle: curTitle });
       if (s.layout === 'cover' || s.layout === 'end') {
         sl.background = { data: assets.bgCover };
         if (s.layout === 'cover') {
@@ -620,7 +670,7 @@
   G.HSCore = {
     W: W, H: H, YEL: YEL, PALETTE: PALETTE, STATUS: STATUS, M12: M12, MON: MON, ACN: ACN,
     uid: uid, T: T, TB: TB, CH: CH, IM: IM, S: S, COVER: COVER, END: END, blanks: blanks, blankRows: blankRows,
-    TEMPLATE: TEMPLATE, newProject: newProject, parseNum: parseNum, chartFormat: chartFormat, fmtVal: fmtVal, seriesPct: seriesPct,
+    TEMPLATE: TEMPLATE, newProject: newProject, SECTION_BY_TPL: SECTION_BY_TPL, sectionOf: sectionOf, sectionsFor: sectionsFor, parseNum: parseNum, chartFormat: chartFormat, fmtVal: fmtVal, seriesPct: seriesPct,
     parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, isNumLike: isNumLike, fitRect: fitRect,
     buildPptx: buildPptx
   };

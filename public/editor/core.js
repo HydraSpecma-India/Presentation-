@@ -708,7 +708,9 @@
         }
         types.push({ type: CT.line, data: [mk(s)], options: { chartColors: [s.color], lineSize: 2, lineDataSymbol: 'circle', lineDataSymbolSize: 5, secondaryValAxis: sec && s.axis === 'secondary', secondaryCatAxis: sec && s.axis === 'secondary', showValue: anyVal && b.labels && !s.noLabels, dataLabelPosition: 't', dataLabelFormatCode: lf } });
       });
-      var opts = Object.assign(base, { valAxes: [{ showValAxisTitle: false, valAxisHidden: true, valGridLine: { style: 'none' } }], catAxes: [{ catAxisTitle: '' }] });
+      /* start the primary axis at 0 unless something is negative (PowerPoint otherwise picks e.g. 90% and lines look misplaced) */
+      var hasNeg = b.series.some(function (s) { return s.axis !== 'secondary' && s.values.some(function (v) { var n = parseNum(v); return n != null && n < 0; }); });
+      var opts = Object.assign(base, { valAxes: [Object.assign({ showValAxisTitle: false, valAxisHidden: true, valGridLine: { style: 'none' } }, hasNeg ? {} : { valAxisMinVal: 0 })], catAxes: [{ catAxisTitle: '' }] });
       if (sec) {
         var sf = chartFormat(b, lines.filter(function (s) { return s.axis === 'secondary'; }));
         opts.valAxes.push({ showValAxisTitle: false, valAxisHidden: false, valAxisLabelFontSize: 7, valAxisLabelFormatCode: sf.code, valAxisMinVal: 0, valGridLine: { style: 'none' } });

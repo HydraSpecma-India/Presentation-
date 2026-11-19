@@ -60,7 +60,7 @@
       cats: cats.slice(), series: (series || [{ name: title }]).map(function (s, i) {
         return { name: s.name, values: blanks(cats.length), kind: s.kind || 'bar', axis: s.axis || 'primary', color: s.color || PALETTE[i % PALETTE.length] };
       }),
-      horizontal: !!o.horizontal, stacked: !!o.stacked, labels: o.labels !== false, legend: !!o.legend
+      horizontal: !!o.horizontal, stacked: !!o.stacked, labels: o.labels !== false, legend: !!o.legend, arrows: !!o.arrows
     };
   }
   function IM(label, x, y, w, h) {
@@ -92,8 +92,8 @@
     var list = [
       COVER('cover', 'Renewables India Management Report', 'Presenter name', 'Date'),
       S('sales-overview', 'Sales Renewables + IAM/OEM', [
-        CH('Revenue chart', 0.4, 1.0, 3.9, 2.7, 'bar', 'Revenue', ['BUD Jan-Sep', 'ACT Jan-Sep', 'BUD-2026', 'FOR-2026'], [{ name: 'Revenue' }]),
-        CH('EBIT chart', 0.4, 3.75, 3.9, 2.6, 'bar', 'EBIT', ['BUD Jan-Sep', 'ACT Jan-Sep', 'BUD-2026', 'FOR-2026'], [{ name: 'EBIT' }]),
+        CH('Revenue chart', 0.4, 1.0, 3.9, 2.7, 'bar', 'Revenue', ['BUD Jan-Sep', 'ACT Jan-Sep', 'BUD-2026', 'FOR-2026'], [{ name: 'Revenue' }], { arrows: true }),
+        CH('EBIT chart', 0.4, 3.75, 3.9, 2.6, 'bar', 'EBIT', ['BUD Jan-Sep', 'ACT Jan-Sep', 'BUD-2026', 'FOR-2026'], [{ name: 'EBIT' }], { arrows: true }),
         CH('Order Intake chart', 4.5, 1.0, 4.3, 2.7, 'bar', 'Order Intake', M12, [{ name: 'Order Intake' }]),
         CH('Order Stock chart', 8.9, 1.0, 4.2, 2.7, 'bar', 'Order Stock', M12, [{ name: 'Order Stock' }]),
         IM('Image 1', 4.5, 3.9, 4.2, 2.55), IM('Image 2', 8.9, 3.9, 4.0, 2.55),
@@ -664,10 +664,61 @@
       sl.addChart(CT.line, lines.map(mk), Object.assign(base, { chartColors: lines.map(function (s) { return s.color; }), lineSize: 2, lineDataSymbol: 'circle', lineDataSymbolSize: 5, showValue: anyVal && b.labels, dataLabelPosition: 't' }));
       return;
     }
+    var arr = arrowGeometry(b, box);
+    if (arr) {
+      /* fixed plot area + axis maximum, so the arrows drawn on top line up with the bars */
+      sl.addChart(CT.bar, bars.map(mk), Object.assign(base, common, {
+        chartColors: bars.map(function (s) { return s.color; }), barGapWidthPct: ARROW_GAP,
+        showValue: anyVal && b.labels, dataLabelPosition: 'ctr', dataLabelFontSize: 9,
+        valAxisMinVal: 0, valAxisMaxVal: arr.axisMax, layout: arr.layout
+      }));
+      var SH = pptx.ShapeType || {}, LINE = SH.line || 'line', OVAL = SH.ellipse || 'ellipse', ln = { color: '595959', width: 1.25 };
+      arr.pairs.forEach(function (a) {
+        sl.addShape(LINE, { x: a.x1, y: a.level, w: 0, h: a.top1 - a.level, line: ln });
+        sl.addShape(LINE, { x: a.x1, y: a.level, w: a.x2 - a.x1, h: 0, line: ln });
+        sl.addShape(LINE, { x: a.x2, y: a.level, w: 0, h: a.top2 - a.level, line: Object.assign({ endArrowType: 'triangle' }, ln) });
+        sl.addText(a.label, { shape: OVAL, x: a.mid - 0.33, y: a.level - 0.13, w: 0.66, h: 0.26, fill: { color: 'FFFFFF' }, line: { color: '595959', width: 1 },
+          fontFace: 'Arial', fontSize: 9, bold: true, color: '404040', align: 'center', valign: 'middle', margin: 0 });
+      });
+      return;
+    }
     sl.addChart(CT.bar, bars.map(mk), Object.assign(base, common, {
       chartColors: bars.map(function (s) { return s.color; }),
       showValue: anyVal && b.labels, dataLabelPosition: b.stacked ? 'ctr' : 'outEnd'
     }));
+  }
+
+  /* Variance arrows (China style): an elbow arrow from bar 1 to bar 2, bar 3 to bar 4 … with the % change in an oval.
+     Only for a single-series vertical bar chart with positive values. Positions are in inches on the slide;
+     the editor preview uses the same numbers scaled to pixels. */
+  var ARROW_GAP = 150;
+  function arrowGeometry(b, box) {
+    if (!b.arrows || b.chartType !== 'bar' || b.horizontal || b.stacked) return null;
+    var s0 = b.series[0]; if (!s0 || b.series.length !== 1) return null;
+    var vals = b.cats.map(function (c, i) { return parseNum(s0.values[i]); });
+    var n = vals.length; if (n < 2) return null;
+    var mx = 0; vals.forEach(function (v) { if (v != null && v > mx) mx = v; });
+    if (!(mx > 0) || vals.some(function (v) { return v != null && v < 0; })) return null;
+    var topPad = b.title ? 0.34 : 0.08, botPad = 0.3 + (b.legend ? 0.2 : 0);
+    var plot = { x: box.x + box.w * 0.02, y: box.y + topPad, w: box.w * 0.96, h: Math.max(0.3, box.h - topPad - botPad) };
+    var axisMax = mx * 1.45, slot = plot.w / n;
+    var cx = function (i) { return plot.x + slot * (i + 0.5); };
+    var top = function (i) { return plot.y + plot.h * (1 - (vals[i] || 0) / axisMax); };
+    var pairs = [];
+    for (var i = 0; i + 1 < n; i += 2) {
+      var a = vals[i], c = vals[i + 1];
+      if (a == null || c == null || a === 0) continue;
+      var t1 = top(i), t2 = top(i + 1);
+      var level = Math.max(plot.y + 0.14, Math.min(t1, t2) - Math.max(0.2, plot.h * 0.14));
+      var pct = (c - a) / Math.abs(a) * 100;
+      pairs.push({ x1: cx(i), x2: cx(i + 1), mid: (cx(i) + cx(i + 1)) / 2, level: level, top1: t1, top2: t2 - 0.02,
+        label: (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct).toFixed(1) + '%' });
+    }
+    if (!pairs.length) return null;
+    return {
+      axisMax: axisMax, plot: plot, pairs: pairs,
+      layout: { x: (plot.x - box.x) / box.w, y: (plot.y - box.y) / box.h, w: plot.w / box.w, h: plot.h / box.h }
+    };
   }
 
   function newProject() {
@@ -678,7 +729,7 @@
     W: W, H: H, YEL: YEL, PALETTE: PALETTE, STATUS: STATUS, M12: M12, MON: MON, ACN: ACN,
     uid: uid, T: T, TB: TB, CH: CH, IM: IM, S: S, COVER: COVER, END: END, blanks: blanks, blankRows: blankRows,
     TEMPLATE: TEMPLATE, newProject: newProject, SECTION_BY_TPL: SECTION_BY_TPL, sectionOf: sectionOf, sectionsFor: sectionsFor, parseNum: parseNum, chartFormat: chartFormat, fmtVal: fmtVal, seriesPct: seriesPct,
-    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, isNumLike: isNumLike, fitRect: fitRect,
+    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
     buildPptx: buildPptx
   };
 })(typeof window !== 'undefined' ? window : globalThis);

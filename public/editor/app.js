@@ -274,6 +274,27 @@ window.HSEditor = { mount: function (opts) {
     if (b.title) o.push('<text x="' + W / 2 + '" y="11" text-anchor="middle" style="font-size:10px">' + esc(b.title) + '</text>');
     var anyVal = ser.some(function (x) { return x.v.some(function (v) { return v != null; }); });
     if (!anyVal) o.push('<text x="' + W / 2 + '" y="' + (H / 2 + 3) + '" text-anchor="middle" fill="#b0b5bd" style="font-size:9px">No data yet – enter values in the panel</text>');
+    var ag = anyVal ? C.arrowGeometry(b, { x: 0, y: 0, w: W / PX, h: H / PX }) : null;
+    if (ag) {
+      /* same geometry as the PowerPoint export (inches → px) */
+      var k = PX, p0 = ag.plot, sl0 = p0.w / cats.length, bw = sl0 / (1 + C.ARROW_GAP / 100), af = C.chartFormat(b, [ser[0].s]);
+      ser[0].v.forEach(function (v, i) {
+        var cxp = (p0.x + sl0 * (i + 0.5)) * k;
+        if (v != null) {
+          var hh = p0.h * (v / ag.axisMax) * k, yy = (p0.y + p0.h) * k - hh;
+          o.push('<rect x="' + (cxp - bw * k / 2) + '" y="' + yy + '" width="' + bw * k + '" height="' + hh + '" fill="#' + ser[0].s.color + '"/>');
+          if (b.labels) o.push('<text x="' + cxp + '" y="' + (yy + hh / 2 + 3) + '" text-anchor="middle" style="font-size:9px" fill="#404040">' + esc(C.fmtVal(v, af)) + '</text>');
+        }
+        o.push('<text x="' + cxp + '" y="' + ((p0.y + p0.h) * k + 10) + '" text-anchor="middle" fill="#404040">' + esc(cats[i]) + '</text>');
+      });
+      o.push('<defs><marker id="ah' + b.id + '" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#595959"/></marker></defs>');
+      ag.pairs.forEach(function (a) {
+        o.push('<polyline points="' + a.x1 * k + ',' + a.top1 * k + ' ' + a.x1 * k + ',' + a.level * k + ' ' + a.x2 * k + ',' + a.level * k + ' ' + a.x2 * k + ',' + a.top2 * k + '" fill="none" stroke="#595959" stroke-width="1.2" marker-end="url(#ah' + b.id + ')"/>');
+        o.push('<ellipse cx="' + a.mid * k + '" cy="' + a.level * k + '" rx="' + 0.33 * k + '" ry="' + 0.13 * k + '" fill="#fff" stroke="#595959"/>');
+        o.push('<text x="' + a.mid * k + '" y="' + (a.level * k + 3.5) + '" text-anchor="middle" style="font-size:9px;font-weight:700" fill="#404040">' + esc(a.label) + '</text>');
+      });
+      return o.join('') + '</svg>';
+    }
     if (b.chartType === 'pie' || b.chartType === 'doughnut') {
       var s0 = ser[0]; if (!s0) return o.join('') + '</svg>';
       var tot = s0.v.reduce(function (a, v) { return a + (v > 0 ? v : 0); }, 0);
@@ -795,6 +816,11 @@ window.HSEditor = { mount: function (opts) {
     var opts = [cb('labels', 'Data labels'), cb('legend', 'Legend')];
     if (b.chartType === 'bar' || b.chartType === 'combo') opts.push(cb('stacked', 'Stacked'));
     if (b.chartType === 'bar') opts.push(cb('horizontal', 'Horizontal'));
+    if (b.chartType === 'bar' && b.series.length === 1) {
+      var ac = cb('arrows', 'Variance arrows (1→2, 3→4)');
+      ac.title = 'Draws an arrow with the % change from bar 1 to bar 2, bar 3 to bar 4 …';
+      opts.push(ac);
+    }
     w.appendChild(el('div', { class: 'row', style: 'justify-content:flex-start;gap:12px;margin-bottom:8px;flex-wrap:wrap' }, opts));
     var grid = el('div', { class: 'gridWrap' });
     function draw() {

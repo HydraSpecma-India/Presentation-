@@ -3,8 +3,14 @@
   'use strict';
   var W = 13.333, H = 7.5;
   var YEL = 'FFCD00', GREY = '595959';
-  var PALETTE = ['FFCD00', '7F7F7F', '404040', 'BF9000', 'A5A5A5', 'FFE699', '262626', 'D9D9D9', 'F4B183', '9DC3E6'];
+  var PALETTE = ['FFCD00', '7F7F7F', '404040', 'BF9000', 'A5A5A5', 'FFE699', '262626', 'D9D9D9', 'F4B183', '9DC3E6', '2F5597', 'C9C9C9'];
   var STATUS = { G: '00B050', Y: 'FFC000', R: 'FF0000' };
+  /* table cell fill markup: a cell starting with "#g ", "#y " or "#r " gets a green / yellow / red background */
+  var CELL_FILL = { g: '92D050', y: 'FFE699', r: 'FF8B8B' };
+  function cellFill(v) {
+    var m = /^#([gyr])(?:\s+|$)/i.exec(String(v == null ? '' : v));
+    return m ? { fill: CELL_FILL[m[1].toLowerCase()], text: String(v).slice(m[0].length) } : { fill: null, text: v == null ? '' : String(v) };
+  }
 
   var _id = 0;
   function uid() { _id++; return 'b' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6) + _id; }
@@ -82,7 +88,7 @@
   /* ---------- the India template (mirrors the China board report, 52 pages) ---------- */
   function TEMPLATE() {
     var supp10 = ['Supplier 1', 'Supplier 2', 'Supplier 3', 'Supplier 4', 'Supplier 5', 'Supplier 6', 'Supplier 7', 'Supplier 8', 'Supplier 9', 'Supplier 10', 'Others'];
-    var yrs = ['2019', '2020', '2021', '2022', '2023', '2024', '2025', 'EST 2026'];
+    var yrs = ['2024', '2025', 'EST 2026'];
     var list = [
       COVER('cover', 'Renewables India Management Report', 'Presenter name', 'Date'),
       S('sales-overview', 'Sales Renewables + IAM/OEM', [
@@ -110,10 +116,9 @@
       ]),
       S('procurement-1', 'Procurement', [
         CH('Yearly spending chart', 0.4, 1.0, 5.6, 3.0, 'combo', 'Yearly Spending/Localization Rate mINR', yrs,
-          [{ name: 'Local', kind: 'bar' }, { name: 'Oversea', kind: 'bar' }, { name: 'Local Rate', kind: 'line', axis: 'secondary' }], { stacked: true, legend: true }),
-        CH('Top 10 oversea spending chart', 0.4, 4.1, 5.6, 2.8, 'doughnut', 'LTM Top 10 Oversea Spending', supp10, [{ name: 'Spending' }]),
-        TB('Top15 spending HS A/S', 6.2, 1.0, 6.8, 2.95, [['Item number', 'Description', 'Spending', 'Comment']], blankRows(15, 4), { size: 6.5, caption: 'LTM Top15 Spending on HS A/S' }),
-        TB('Top15 spending HS Renewables AB', 6.2, 4.05, 6.8, 2.85, [['Item number', 'Description', 'Spending', 'Comment']], blankRows(15, 4), { size: 6.5, caption: 'LTM Top15 Spending on HS Renewables AB' })
+          [{ name: 'Local', kind: 'bar' }, { name: 'Oversea', kind: 'bar' }, { name: 'Local Rate', kind: 'line', axis: 'secondary' }], { legend: true }),
+        CH('Top 10 oversea spending chart', 0.4, 4.1, 5.6, 2.8, 'doughnut', 'LTM Top 10 Oversea Spending mINR', supp10, [{ name: 'Spending' }], { legend: true }),
+        TB('Top15 spending HS A/S', 6.2, 1.0, 6.8, 5.55, [['Item number', 'Description', 'Spending', 'Comment']], blankRows(15, 4), { size: 8, caption: 'LTM Top15 Spending on HS A/S (INR)', colW: '1.5,3,1.1,2.6' })
       ]),
       S('procurement-2', 'Procurement', [
         CH('Top 10 local spending chart', 0.4, 1.0, 6.0, 2.9, 'doughnut', 'LTM Top 10 Local Spending', supp10, [{ name: 'Spending' }]),
@@ -570,8 +575,9 @@
         var isH = ri < b.header, isTot = b.totalRow && ri === rows.length - 1, bold = !!(b.rowBold && b.rowBold[ri]);
         var cells = [];
         for (var c = 0; c < nc; c++) {
-          var v = r[c] == null ? '' : String(r[c]);
+          var cf = cellFill(r[c]), v = cf.text;
           var o = { fontSize: fs2, fontFace: 'Arial', color: '000000', valign: 'middle', margin: [1, 3, 1, 3] };
+          if (cf.fill) o.fill = { color: cf.fill };
           if (isH) { o.bold = true; o.fill = { color: YEL }; o.align = c === 0 ? 'left' : 'center'; }
           else {
             if (isTot) { o.bold = true; o.fill = { color: 'FFF2CC' }; }
@@ -623,11 +629,12 @@
       if (!s0) return;
       var pf = chartFormat(b, [s0]);
       var pd = mk(s0);
-      if (anyVal && b.labels) pd.labels = cats.map(function (c, i) { var n = parseNum(s0.values[i]); return n == null ? c : c + ', ' + fmtVal(n, pf); });
+      if (anyVal && (b.labels || b.legend)) pd.labels = cats.map(function (c, i) { var n = parseNum(s0.values[i]); return n == null ? c : c + ', ' + fmtVal(n, pf); });
       sl.addChart(b.chartType === 'pie' ? CT.pie : CT.doughnut, [pd], Object.assign(base, {
         dataLabelFormatCode: '0%',
         chartColors: cats.map(function (c, i) { return PALETTE[i % PALETTE.length]; }),
-        showValue: false, showPercent: anyVal && b.labels, showLabel: anyVal && b.labels, showLeaderLines: true,
+        /* with a legend the names + values move to the legend and the slices only show % (keeps small slices readable) */
+        showValue: false, showPercent: anyVal && b.labels, showLabel: anyVal && b.labels && !b.legend, showLeaderLines: true,
         dataLabelPosition: b.chartType === 'pie' ? 'bestFit' : undefined, holeSize: 55, showLegend: !!b.legend, legendPos: 'r'
       }));
       return;
@@ -671,7 +678,7 @@
     W: W, H: H, YEL: YEL, PALETTE: PALETTE, STATUS: STATUS, M12: M12, MON: MON, ACN: ACN,
     uid: uid, T: T, TB: TB, CH: CH, IM: IM, S: S, COVER: COVER, END: END, blanks: blanks, blankRows: blankRows,
     TEMPLATE: TEMPLATE, newProject: newProject, SECTION_BY_TPL: SECTION_BY_TPL, sectionOf: sectionOf, sectionsFor: sectionsFor, parseNum: parseNum, chartFormat: chartFormat, fmtVal: fmtVal, seriesPct: seriesPct,
-    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, isNumLike: isNumLike, fitRect: fitRect,
+    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, isNumLike: isNumLike, fitRect: fitRect,
     buildPptx: buildPptx
   };
 })(typeof window !== 'undefined' ? window : globalThis);

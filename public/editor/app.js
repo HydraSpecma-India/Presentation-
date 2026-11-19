@@ -248,8 +248,8 @@ window.HSEditor = { mount: function (opts) {
     b.rows.forEach(function (r, ri) {
       var tr = el('tr', { class: ri < b.header ? 'hd' : (b.totalRow && ri === b.rows.length - 1 ? 'tot' : ''), style: 'height:' + rhs[ri] * PX + 'px' });
       for (var c = 0; c < nc; c++) {
-        var v = r[c] == null ? '' : String(r[c]);
-        var st = '';
+        var cf = C.cellFill(r[c]), v = cf.text;
+        var st = cf.fill ? 'background:#' + cf.fill + ';' : '';
         if (ri >= b.header) {
           if ((b.rowBold && b.rowBold[ri]) || (b.firstColBold && c === 0)) st += 'font-weight:700;';
           if (c > 0 && C.isNumLike(v)) st += 'text-align:right;';
@@ -277,7 +277,16 @@ window.HSEditor = { mount: function (opts) {
     if (b.chartType === 'pie' || b.chartType === 'doughnut') {
       var s0 = ser[0]; if (!s0) return o.join('') + '</svg>';
       var tot = s0.v.reduce(function (a, v) { return a + (v > 0 ? v : 0); }, 0);
-      var cx = W / 2, cy = top + (H - top - 4) / 2, R = Math.max(5, Math.min(W * 0.28, (H - top - 8) / 2 - 6)), r0 = b.chartType === 'doughnut' ? R * 0.55 : 0;
+      var lgd = !!b.legend, cx = lgd ? W * 0.32 : W / 2, cy = top + (H - top - 4) / 2, R = Math.max(5, Math.min(W * (lgd ? 0.22 : 0.28), (H - top - 8) / 2 - 6)), r0 = b.chartType === 'doughnut' ? R * 0.55 : 0;
+      if (lgd) {
+        var lh = Math.min(12, (H - top - 6) / Math.max(1, cats.length)), ly0 = cy - lh * cats.length / 2, lx0 = W * 0.6;
+        var pfl = C.chartFormat(b, [s0.s]);
+        cats.forEach(function (c, i) {
+          var yy = ly0 + i * lh;
+          o.push('<rect x="' + lx0 + '" y="' + (yy + 1) + '" width="7" height="7" fill="#' + C.PALETTE[i % C.PALETTE.length] + '"/>');
+          o.push('<text x="' + (lx0 + 10) + '" y="' + (yy + 7.5) + '">' + esc(c + (s0.v[i] != null && !isNaN(s0.v[i]) ? ', ' + C.fmtVal(s0.v[i], pfl) : '')) + '</text>');
+        });
+      }
       var a = -Math.PI / 2, pf = C.chartFormat(b, [s0.s]);
       if (tot > 0) s0.v.forEach(function (v, i) {
         if (!(v > 0)) return;
@@ -289,7 +298,8 @@ window.HSEditor = { mount: function (opts) {
         o.push('<path d="' + p + '" fill="' + col + '" stroke="#fff" stroke-width="0.8"/>');
         if (b.labels) {
           var am = a + da / 2, lx = cx + (R + 8) * Math.cos(am), ly = cy + (R + 8) * Math.sin(am);
-          o.push('<text x="' + lx + '" y="' + ly + '" text-anchor="' + (Math.cos(am) >= 0 ? 'start' : 'end') + '">' + esc(cats[i] + ', ' + C.fmtVal(v, pf) + ', ' + Math.round(v / tot * 100) + '%') + '</text>');
+          var lt = lgd ? Math.round(v / tot * 100) + '%' : cats[i] + ', ' + C.fmtVal(v, pf) + ', ' + Math.round(v / tot * 100) + '%';
+          o.push('<text x="' + lx + '" y="' + ly + '" text-anchor="' + (Math.cos(am) >= 0 ? 'start' : 'end') + '">' + esc(lt) + '</text>');
         }
         a = a2;
       });
@@ -769,7 +779,7 @@ window.HSEditor = { mount: function (opts) {
       ]);
       setTimeout(function () { ta.focus(); }, 30);
     }
-    w.appendChild(el('div', { class: 'help', html: 'Tip: copy a range in Excel and paste into any cell – it fills across and down (rows/columns are added as needed). Or use <b>Paste table</b> to replace all rows at once, and <b>Copy table</b> to take it back to Excel. Status column: type <code>G</code>, <code>Y</code> or <code>R</code> for a green/yellow/red dot.' }));
+    w.appendChild(el('div', { class: 'help', html: 'Tip: copy a range in Excel and paste into any cell – it fills across and down (rows/columns are added as needed). Or use <b>Paste table</b> to replace all rows at once, and <b>Copy table</b> to take it back to Excel. Start a cell with <code>#g </code>, <code>#y </code> or <code>#r </code> to fill it green, yellow or red (e.g. <code>#g Localized</code>). Status column: type <code>G</code>, <code>Y</code> or <code>R</code> for a green/yellow/red dot.' }));
     return w;
   }
   function fldInline(label, input) { input.style.width = '150px'; return el('label', { class: 'chk', style: 'flex:none' }, [label, input]); }

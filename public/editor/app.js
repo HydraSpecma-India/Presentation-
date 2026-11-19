@@ -629,9 +629,40 @@ window.HSEditor = { mount: function (opts) {
     var t = (e.clipboardData || window.clipboardData).getData('text');
     if (!t || (t.indexOf('\t') < 0 && t.indexOf('\n') < 0)) return false;
     e.preventDefault();
-    var rows = t.replace(/\r/g, '').replace(/\n$/, '').split('\n').map(function (r) { return r.split('\t'); });
-    apply(rows, startR, startC);
+    apply(parseTsv(t), startR, startC);
     return true;
+  }
+  /* Excel-style TSV: cells containing tabs/newlines/quotes arrive wrapped in "..." with "" escapes */
+  function parseTsv(t) {
+    t = String(t || '').replace(/\r\n?/g, '\n');
+    var rows = [], row = [], cell = '', i = 0, q = false;
+    while (i < t.length) {
+      var ch = t[i];
+      if (q) {
+        if (ch === '"') { if (t[i + 1] === '"') { cell += '"'; i += 2; continue; } q = false; i++; continue; }
+        cell += ch; i++; continue;
+      }
+      if (ch === '"' && cell === '') { q = true; i++; continue; }
+      if (ch === '\t') { row.push(cell); cell = ''; i++; continue; }
+      if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; i++; continue; }
+      cell += ch; i++;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows;
+  }
+  function toTsv(rows) {
+    return rows.map(function (r) {
+      return r.map(function (v) { v = v == null ? '' : String(v); return /[\t\n"]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join('\t');
+    }).join('\n');
+  }
+  function copyText(text) {
+    function fallback() {
+      var ta = el('textarea', { style: 'position:fixed;left:-9999px;top:0' }); ta.value = text; document.body.appendChild(ta); ta.select();
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      ta.remove(); return ok;
+    }
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).then(function () { return true; }, fallback);
+    return Promise.resolve(fallback());
   }
 
   /* ---------- table editor ---------- */
@@ -701,10 +732,44 @@ window.HSEditor = { mount: function (opts) {
     w.appendChild(grid);
     w.appendChild(el('div', { class: 'row', style: 'margin-top:6px;justify-content:flex-start;flex-wrap:wrap;gap:6px' }, [
       el('button', { class: 'btn sm', text: '+ Row', onclick: function () { b.rows.push(C.blanks(nc())); draw(); changed('table'); } }),
+      el('button', { class: 'btn sm', text: 'Copy table', title: 'Copy the whole table (with headers) – paste it into Excel', onclick: function () {
+        copyText(toTsv(b.rows)).then(function (ok) { toast(ok ? 'Table copied – paste it into Excel' : 'Copy blocked by the browser'); });
+      } }),
+      el('button', { class: 'btn sm', text: 'Paste table', title: 'Replace the table rows with data copied from Excel', onclick: function () { pasteTableDialog(); } }),
       el('button', { class: 'btn sm', text: 'Clear numbers', title: 'Empty all cells except header rows and the first column', onclick: function () { b.rows.forEach(function (r, ri) { if (ri >= b.header) for (var c = 1; c < r.length; c++) r[c] = ''; }); draw(); changed('table'); } }),
       fldInline('Column widths', tInput(b, 'colW', 'table', 'auto, e.g. 3,1,1,1'))
     ]));
-    w.appendChild(el('div', { class: 'help', html: 'Tip: copy a range in Excel and paste into any cell – it fills across and down (rows/columns are added as needed). Status column: type <code>G</code>, <code>Y</code> or <code>R</code> for a green/yellow/red dot.' }));
+    function pasteTableDialog() {
+      var box = el('div');
+      var ta = el('textarea', { class: 'inp', rows: '10', style: 'width:100%;font-family:monospace;font-size:12px;white-space:pre', placeholder: 'Copy the rows in Excel (Ctrl+C) and paste here (Ctrl+V)' });
+      var keep = el('input', { type: 'checkbox' }); keep.checked = true;
+      box.appendChild(el('div', { class: 'help', style: 'margin-bottom:8px', html: 'Pasted rows replace the rows below the ' + b.header + ' header row(s). If the pasted block starts with the same header rows, they are skipped.' }));
+      box.appendChild(ta);
+      box.appendChild(el('label', { class: 'chk', style: 'margin-top:8px' }, [keep, 'Keep text already typed where the pasted cell is empty (e.g. your comments)']));
+      ask('Paste table', box, [
+        ['Cancel'],
+        ['Replace rows', function () {
+          var rows = parseTsv(ta.value).filter(function (r) { return r.some(function (v) { return String(v).trim() !== ''; }); });
+          if (!rows.length) { toast('Nothing to paste'); return false; }
+          var same = function (a, h) { return a.map(function (v) { return String(v).trim(); }).join('\t').replace(/\t+$/, '') === h.map(function (v) { return String(v == null ? '' : v).trim(); }).join('\t').replace(/\t+$/, ''); };
+          var hi = 0; while (hi < b.header && rows.length && same(rows[0], b.rows[hi])) { rows.shift(); hi++; }
+          var old = b.rows.slice(b.header), n = Math.max(nc(), rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0));
+          var body = rows.map(function (r, k) {
+            var out = []; for (var c = 0; c < n; c++) {
+              var v = r[c] == null ? '' : String(r[c]);
+              if (keep.checked && v.trim() === '' && old[k] && old[k][c]) v = old[k][c];
+              out.push(v);
+            }
+            return out;
+          });
+          b.rows = b.rows.slice(0, b.header).concat(body);
+          b.rowBold = (b.rowBold || []).slice(0, b.rows.length);
+          draw(); changed('table'); toast('Pasted ' + body.length + ' row(s)');
+        }, 'y']
+      ]);
+      setTimeout(function () { ta.focus(); }, 30);
+    }
+    w.appendChild(el('div', { class: 'help', html: 'Tip: copy a range in Excel and paste into any cell – it fills across and down (rows/columns are added as needed). Or use <b>Paste table</b> to replace all rows at once, and <b>Copy table</b> to take it back to Excel. Status column: type <code>G</code>, <code>Y</code> or <code>R</code> for a green/yellow/red dot.' }));
     return w;
   }
   function fldInline(label, input) { input.style.width = '150px'; return el('label', { class: 'chk', style: 'flex:none' }, [label, input]); }

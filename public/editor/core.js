@@ -99,7 +99,7 @@
       ]),
       S('low-margin', 'Sales – Low Margin Items', [
         TB('Low margin items table', 0.4, 1.1, 12.5, 5.4,
-          [['', '', '', 'Jan-Sep 2025', '', '', 'Jan-Sep 2026', '', '', ''], ['Item', 'Item Description', 'Type', 'Sales', 'Margin', 'CM%', 'Sales', 'Margin', 'CM%', 'Comment']],
+          [['', '', '', 'Jan-Oct 2025', '', '', 'Jan-Oct 2026', '', '', ''], ['Item', 'Item Description', 'Type', 'Sales', 'Margin', 'CM%', 'Sales', 'Margin', 'CM%', 'Comment']],
           blankRows(10, 10).concat([['Other'].concat(blanks(9)), ['', '', 'Total'].concat(blanks(7))]), { size: 9, totalRow: true })
       ]),
       S('production', 'Production', [

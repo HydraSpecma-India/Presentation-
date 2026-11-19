@@ -398,6 +398,9 @@ window.HSEditor = { mount: function (opts) {
             if (lab) o.push('<text x="' + (off + bw / 2) + '" y="' + (b.stacked ? ya + yh / 2 + 2.5 : (v >= 0 ? ya - 2 : ya + yh + 7)) + '" text-anchor="middle">' + lab + '</text>');
           }
         });
+        if (b.totals && b.stacked && !horiz && bars.length > 1 && pos > 0) {
+          o.push('<text x="' + (c0 + band / 2) + '" y="' + (Y(pos) - 2.5) + '" text-anchor="middle" style="font-weight:700">' + esc(C.fmtVal(Math.round(pos * 100) / 100, fb)) + '</text>');
+        }
       }
     }
     lines.forEach(function (x, j) {
@@ -825,6 +828,7 @@ window.HSEditor = { mount: function (opts) {
     w.appendChild(el('div', { class: 'row' }, [fld('Chart title', tInput(b, 'title', 'chart')), fld('Chart type', ty)]));
     var opts = [cb('labels', 'Data labels'), cb('legend', 'Legend')];
     if (b.chartType === 'bar' || b.chartType === 'combo') opts.push(cb('stacked', 'Stacked'));
+    if (b.chartType === 'bar' || b.chartType === 'combo') { var tc = cb('totals', 'Show totals'); tc.title = 'Stacked charts: show the total above each column'; opts.push(tc); }
     if (b.chartType === 'bar') opts.push(cb('horizontal', 'Horizontal'));
     if (b.chartType === 'bar' && b.series.length === 1) {
       var ac = cb('arrows', 'Variance arrows (1→2, 3→4)');

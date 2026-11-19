@@ -610,6 +610,15 @@
     return { x: box.x + (box.w - w) / 2, y: box.y + (box.h - h) / 2, w: w, h: h };
   }
 
+  /* sum of the bar series per category (for the "Show totals" option on stacked charts) */
+  function stackTotals(b) {
+    var bars = b.series.filter(function (s) { return b.chartType === 'bar' || s.kind !== 'line'; });
+    return b.cats.map(function (c, i) {
+      var any = false, t = 0;
+      bars.forEach(function (s) { var n = parseNum(s.values[i]); if (n != null) { any = true; t += n; } });
+      return any ? Math.round(t * 100) / 100 : null;
+    });
+  }
   /* share of a slice as a whole-number % (one decimal below 1%) */
   function pctLabel(n, tot) { var p = n / tot * 100; return (p > 0 && p < 1 ? p.toFixed(1) : Math.round(p)) + '%'; }
 
@@ -664,11 +673,19 @@
     var fb = chartFormat(b, bars.length ? bars : lines);
     base.dataLabelFormatCode = fb.code;
     var common = { barDir: b.horizontal ? 'bar' : 'col', barGrouping: b.stacked ? 'stacked' : 'clustered', barGapWidthPct: 60 };
-    if (b.chartType === 'combo' && bars.length && lines.length) {
+    /* stacked columns with "Show totals": an invisible line through the stack totals carries the total labels on top */
+    if (b.totals && b.stacked && !b.horizontal && bars.length > 1 && anyVal) {
+      lines = lines.concat([{ name: 'Total', color: '000000', axis: 'primary', values: stackTotals(b).map(function (t) { return t == null ? '' : String(t); }), hidden: true }]);
+    }
+    if ((b.chartType === 'combo' || lines.some(function (s) { return s.hidden; })) && bars.length && lines.length) {
       var sec = lines.some(function (s) { return s.axis === 'secondary'; });
       var types = [{ type: CT.bar, data: bars.map(mk), options: Object.assign({ chartColors: bars.map(function (s) { return s.color; }) }, common, { showValue: anyVal && b.labels, dataLabelPosition: b.stacked ? 'ctr' : 'outEnd', dataLabelFormatCode: fb.code }) }];
       lines.forEach(function (s) {
         var lf = chartFormat(b, [s]).code;
+        if (s.hidden) {
+          types.push({ type: CT.line, data: [mk(s)], options: { chartColors: ['FFFFFF'], lineSize: 0, lineDataSymbol: 'none', showValue: true, dataLabelPosition: 't', dataLabelFormatCode: fb.code, dataLabelFontBold: true, dataLabelColor: '000000' } });
+          return;
+        }
         types.push({ type: CT.line, data: [mk(s)], options: { chartColors: [s.color], lineSize: 2, lineDataSymbol: 'circle', lineDataSymbolSize: 5, secondaryValAxis: sec && s.axis === 'secondary', secondaryCatAxis: sec && s.axis === 'secondary', showValue: anyVal && b.labels && !s.noLabels, dataLabelPosition: 't', dataLabelFormatCode: lf } });
       });
       var opts = Object.assign(base, { valAxes: [{ showValAxisTitle: false, valAxisHidden: true, valGridLine: { style: 'none' } }], catAxes: [{ catAxisTitle: '' }] });
@@ -749,7 +766,7 @@
     W: W, H: H, YEL: YEL, PALETTE: PALETTE, STATUS: STATUS, M12: M12, MON: MON, ACN: ACN,
     uid: uid, T: T, TB: TB, CH: CH, IM: IM, S: S, COVER: COVER, END: END, blanks: blanks, blankRows: blankRows,
     TEMPLATE: TEMPLATE, newProject: newProject, SECTION_BY_TPL: SECTION_BY_TPL, sectionOf: sectionOf, sectionsFor: sectionsFor, parseNum: parseNum, chartFormat: chartFormat, fmtVal: fmtVal, seriesPct: seriesPct,
-    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, pctLabel: pctLabel, stampGeometry: stampGeometry, STAMP_COLOR: STAMP_COLOR, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
+    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, stackTotals: stackTotals, pctLabel: pctLabel, stampGeometry: stampGeometry, STAMP_COLOR: STAMP_COLOR, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
     buildPptx: buildPptx
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -750,10 +750,12 @@
       });
       return;
     }
+    /* bars always start at 0 unless something is negative, so close values are not exaggerated */
+    var barNeg = bars.some(function (s) { return s.values.some(function (v) { var n = parseNum(v); return n != null && n < 0; }); });
     sl.addChart(CT.bar, bars.map(mk), Object.assign(base, common, {
       chartColors: bars.map(function (s) { return s.color; }),
       showValue: anyVal && b.labels, dataLabelPosition: b.stacked ? 'ctr' : 'outEnd'
-    }));
+    }, barNeg ? {} : { valAxisMinVal: 0 }));
   }
 
   /* Variance arrows (China style): an elbow arrow from bar 1 to bar 2, bar 3 to bar 4 … with the % change in an oval.

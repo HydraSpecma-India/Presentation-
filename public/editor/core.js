@@ -610,7 +610,26 @@
     return { x: box.x + (box.w - w) / 2, y: box.y + (box.h - h) / 2, w: w, h: h };
   }
 
+  /* share of a slice as a whole-number % (one decimal below 1%) */
+  function pctLabel(n, tot) { var p = n / tot * 100; return (p > 0 && p < 1 ? p.toFixed(1) : Math.round(p)) + '%'; }
+
+  /* Stamp: a tilted green circle with a big value and a short note over the chart, e.g. "0" + "injuries Jan–Oct 2026" */
+  var STAMP_COLOR = '00A651';
+  function stampGeometry(b, box) {
+    if (!b.stamp || !String(b.stamp).trim()) return null;
+    var d = Math.min(box.h * 0.62, box.w * 0.4, 1.5);
+    return { x: box.x + box.w - d - box.w * 0.06, y: box.y + (box.h - d) / 2 + 0.05, d: d };
+  }
   function exportChart(pptx, sl, b, box) {
+    exportChartBody(pptx, sl, b, box);
+    var g = stampGeometry(b, box);
+    if (!g) return;
+    var runs = [{ text: String(b.stamp).trim(), options: { fontSize: Math.round(g.d * 26), bold: true, color: STAMP_COLOR, breakLine: !!b.stampNote } }];
+    if (b.stampNote) runs.push({ text: String(b.stampNote), options: { fontSize: Math.max(6, Math.round(g.d * 5.5)), bold: true, color: STAMP_COLOR } });
+    sl.addText(runs, { shape: (pptx.ShapeType && pptx.ShapeType.ellipse) || 'ellipse', x: g.x, y: g.y, w: g.d, h: g.d, rotate: -12,
+      fill: { color: 'FFFFFF', transparency: 15 }, line: { color: STAMP_COLOR, width: 3 }, fontFace: 'Arial', align: 'center', valign: 'middle', margin: 2 });
+  }
+  function exportChartBody(pptx, sl, b, box) {
     var CT = pptx.ChartType || pptx.charts;
     var cats = b.cats.map(function (c) { return String(c == null ? '' : c); });
     var f = chartFormat(b);
@@ -629,7 +648,8 @@
       if (!s0) return;
       var pf = chartFormat(b, [s0]);
       var pd = mk(s0);
-      if (anyVal && (b.labels || b.legend)) pd.labels = cats.map(function (c, i) { var n = parseNum(s0.values[i]); return n == null ? c : c + ', ' + fmtVal(n, pf); });
+      var ptot = s0.values.reduce(function (a, v) { var n = parseNum(v); return a + (n > 0 ? n : 0); }, 0);
+      if (anyVal && (b.labels || b.legend)) pd.labels = cats.map(function (c, i) { var n = parseNum(s0.values[i]); return n == null ? c : c + ', ' + fmtVal(n, pf) + (b.legend && ptot > 0 ? ' (' + pctLabel(n, ptot) + ')' : ''); });
       sl.addChart(b.chartType === 'pie' ? CT.pie : CT.doughnut, [pd], Object.assign(base, {
         dataLabelFormatCode: '0%',
         chartColors: cats.map(function (c, i) { return PALETTE[i % PALETTE.length]; }),
@@ -729,7 +749,7 @@
     W: W, H: H, YEL: YEL, PALETTE: PALETTE, STATUS: STATUS, M12: M12, MON: MON, ACN: ACN,
     uid: uid, T: T, TB: TB, CH: CH, IM: IM, S: S, COVER: COVER, END: END, blanks: blanks, blankRows: blankRows,
     TEMPLATE: TEMPLATE, newProject: newProject, SECTION_BY_TPL: SECTION_BY_TPL, sectionOf: sectionOf, sectionsFor: sectionsFor, parseNum: parseNum, chartFormat: chartFormat, fmtVal: fmtVal, seriesPct: seriesPct,
-    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
+    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, pctLabel: pctLabel, stampGeometry: stampGeometry, STAMP_COLOR: STAMP_COLOR, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
     buildPptx: buildPptx
   };
 })(typeof window !== 'undefined' ? window : globalThis);

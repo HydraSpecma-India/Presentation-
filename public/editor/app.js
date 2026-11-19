@@ -265,6 +265,15 @@ window.HSEditor = { mount: function (opts) {
 
   /* ---------- chart preview (SVG) ---------- */
   function chartSVG(b, W, H) {
+    var svg = chartSVGBody(b, W, H), g = C.stampGeometry(b, { x: 0, y: 0, w: W / PX, h: H / PX });
+    if (!g) return svg;
+    var cx = (g.x + g.d / 2) * PX, cy = (g.y + g.d / 2) * PX, r = g.d / 2 * PX, col = '#' + C.STAMP_COLOR, note = b.stampNote ? String(b.stampNote) : '';
+    var st = '<g transform="rotate(-12 ' + cx + ' ' + cy + ')"><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="rgba(255,255,255,.85)" stroke="' + col + '" stroke-width="3"/>' +
+      '<text x="' + cx + '" y="' + (cy + (note ? 0 : r * 0.35)) + '" text-anchor="middle" fill="' + col + '" style="font-size:' + Math.round(r * 0.95) + 'px;font-weight:700">' + esc(String(b.stamp).trim()) + '</text>' +
+      (note ? '<text x="' + cx + '" y="' + (cy + r * 0.45) + '" text-anchor="middle" fill="' + col + '" style="font-size:' + Math.max(6, Math.round(r * 0.2)) + 'px;font-weight:700">' + esc(note) + '</text>' : '') + '</g>';
+    return svg.replace(/<\/svg>$/, st + '</svg>');
+  }
+  function chartSVGBody(b, W, H) {
     var f = C.chartFormat(b);
     var o = [];
     var top = b.title ? 16 : 4, bot = 14 + (b.legend ? 13 : 0), left = 4, right = 4;
@@ -305,7 +314,8 @@ window.HSEditor = { mount: function (opts) {
         cats.forEach(function (c, i) {
           var yy = ly0 + i * lh;
           o.push('<rect x="' + lx0 + '" y="' + (yy + 1) + '" width="7" height="7" fill="#' + C.PALETTE[i % C.PALETTE.length] + '"/>');
-          o.push('<text x="' + (lx0 + 10) + '" y="' + (yy + 7.5) + '">' + esc(c + (s0.v[i] != null && !isNaN(s0.v[i]) ? ', ' + C.fmtVal(s0.v[i], pfl) : '')) + '</text>');
+          var lv = s0.v[i] != null && !isNaN(s0.v[i]) ? ', ' + C.fmtVal(s0.v[i], pfl) + (tot > 0 ? ' (' + C.pctLabel(s0.v[i], tot) + ')' : '') : '';
+          o.push('<text x="' + (lx0 + 10) + '" y="' + (yy + 7.5) + '">' + esc(c + lv) + '</text>');
         });
       }
       var a = -Math.PI / 2, pf = C.chartFormat(b, [s0.s]);
@@ -822,6 +832,8 @@ window.HSEditor = { mount: function (opts) {
       opts.push(ac);
     }
     w.appendChild(el('div', { class: 'row', style: 'justify-content:flex-start;gap:12px;margin-bottom:8px;flex-wrap:wrap' }, opts));
+    w.appendChild(el('div', { class: 'row', style: 'justify-content:flex-start;gap:12px;margin-bottom:8px;flex-wrap:wrap', title: 'Optional green stamp over the chart, e.g. 0 + injuries Jan–Oct' }, [
+      fldInline('Stamp', tInput(b, 'stamp', 'chart', 'e.g. 0')), fldInline('Stamp note', tInput(b, 'stampNote', 'chart', 'e.g. injuries Jan–Oct'))]));
     var grid = el('div', { class: 'gridWrap' });
     function draw() {
       grid.innerHTML = '';

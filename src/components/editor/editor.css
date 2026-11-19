@@ -490,7 +490,7 @@ table.pt td {
   border: 0.5px solid #bfbfbf;
   padding: 0 2px;
   overflow: hidden;
-  white-space: nowrap;
+  white-space: pre-line;
   text-overflow: clip;
   line-height: 1.1;
 }

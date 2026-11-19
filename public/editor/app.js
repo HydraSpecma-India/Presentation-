@@ -741,7 +741,12 @@ window.HSEditor = { mount: function (opts) {
         for (var c = 0; c < n; c++) (function (c) {
           var st = (ri >= b.header && c === b.statusCol) ? C.normStatus(r[c]) : '';
           var td = el('td', { class: (c === 0 ? 'c0' : '') + (st ? ' st-' + st : '') });
-          var i = el('input', { type: 'text', value: r[c] == null ? '' : r[c], placeholder: ri >= b.header && c === b.statusCol ? 'G / Y / R' : '' });
+          var cv = r[c] == null ? '' : String(r[c]);
+          /* cells with line breaks get a small textarea so the breaks survive editing */
+          var i = cv.indexOf('\n') >= 0
+            ? el('textarea', { rows: String(Math.min(5, cv.split('\n').length)), style: 'width:100%;min-width:220px;font:inherit;resize:vertical;border:1px solid #e3e5e8;padding:2px 4px' })
+            : el('input', { type: 'text', value: cv, placeholder: ri >= b.header && c === b.statusCol ? 'G / Y / R' : '' });
+          if (i.tagName === 'TEXTAREA') i.value = cv;
           i.addEventListener('input', function () { r[c] = i.value; if (c === b.statusCol) { td.className = (c === 0 ? 'c0' : '') + (C.normStatus(i.value) ? ' st-' + C.normStatus(i.value) : ''); } changed('table'); });
           i.addEventListener('paste', function (e) {
             spreadPaste(e, ri, c, function (rows, r0, c0) {

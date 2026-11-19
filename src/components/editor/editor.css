@@ -783,7 +783,7 @@ table.g td.st-R input {
 }
 .ser {
   display: grid;
-  grid-template-columns: 1fr 34px 90px auto 24px;
+  grid-template-columns: 1fr 34px 90px auto auto 24px;
   gap: 6px;
   align-items: center;
   margin-top: 6px;

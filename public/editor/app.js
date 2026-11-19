@@ -398,7 +398,7 @@ window.HSEditor = { mount: function (opts) {
       if (pts.length > 1) o.push('<polyline fill="none" stroke="' + col + '" stroke-width="1.6" points="' + pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '"/>');
       pts.forEach(function (p) {
         o.push('<circle cx="' + p[0] + '" cy="' + p[1] + '" r="2" fill="' + col + '"/>');
-        if (b.labels) o.push('<text x="' + p[0] + '" y="' + (p[1] - 4) + '" text-anchor="middle">' + esc(C.fmtVal(p[2], lf)) + '</text>');
+        if (b.labels && !x.s.noLabels) o.push('<text x="' + p[0] + '" y="' + (p[1] - 4) + '" text-anchor="middle">' + esc(C.fmtVal(p[2], lf)) + '</text>');
       });
     });
     if (secL.length) {
@@ -886,11 +886,14 @@ window.HSEditor = { mount: function (opts) {
         col.addEventListener('input', function () { s.color = col.value.replace('#', '').toUpperCase(); changed('chart'); });
         var kind = el('select', { class: 'inp' }, [el('option', { value: 'bar', text: 'Bars' }), el('option', { value: 'line', text: 'Line' })]);
         kind.value = s.kind || 'bar'; kind.disabled = b.chartType !== 'combo';
-        kind.addEventListener('change', function () { s.kind = kind.value; changed('chart'); });
+        kind.addEventListener('change', function () { s.kind = kind.value; changed('chart'); drawSeries(); });
         var ax = el('input', { type: 'checkbox' }); ax.checked = s.axis === 'secondary'; ax.disabled = b.chartType !== 'combo';
         ax.addEventListener('change', function () { s.axis = ax.checked ? 'secondary' : 'primary'; changed('chart'); });
+        var lb = el('input', { type: 'checkbox' }); lb.checked = !s.noLabels; lb.disabled = !(b.chartType === 'combo' && s.kind === 'line');
+        lb.addEventListener('change', function () { if (lb.checked) delete s.noLabels; else s.noLabels = true; changed('chart'); });
         sw.appendChild(el('div', { class: 'ser' }, [el('span', { text: s.name || ('Series ' + (si + 1)), style: 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }), col, kind,
           el('label', { class: 'chk', title: 'Right-hand axis (combo only), e.g. for % lines' }, [ax, '2nd axis']),
+          el('label', { class: 'chk', title: 'Show the value labels of this line (combo charts) – untick for a target line' }, [lb, 'Values']),
           el('button', { class: 'ib del', text: '✕', title: 'Remove series', onclick: function () { if (b.series.length < 2) return; b.series.splice(si, 1); draw(); drawSeries(); changed('chart'); } })]));
       });
     }

@@ -649,7 +649,7 @@
       var types = [{ type: CT.bar, data: bars.map(mk), options: Object.assign({ chartColors: bars.map(function (s) { return s.color; }) }, common, { showValue: anyVal && b.labels, dataLabelPosition: b.stacked ? 'ctr' : 'outEnd', dataLabelFormatCode: fb.code }) }];
       lines.forEach(function (s) {
         var lf = chartFormat(b, [s]).code;
-        types.push({ type: CT.line, data: [mk(s)], options: { chartColors: [s.color], lineSize: 2, lineDataSymbol: 'circle', lineDataSymbolSize: 5, secondaryValAxis: sec && s.axis === 'secondary', secondaryCatAxis: sec && s.axis === 'secondary', showValue: anyVal && b.labels, dataLabelPosition: 't', dataLabelFormatCode: lf } });
+        types.push({ type: CT.line, data: [mk(s)], options: { chartColors: [s.color], lineSize: 2, lineDataSymbol: 'circle', lineDataSymbolSize: 5, secondaryValAxis: sec && s.axis === 'secondary', secondaryCatAxis: sec && s.axis === 'secondary', showValue: anyVal && b.labels && !s.noLabels, dataLabelPosition: 't', dataLabelFormatCode: lf } });
       });
       var opts = Object.assign(base, { valAxes: [{ showValAxisTitle: false, valAxisHidden: true, valGridLine: { style: 'none' } }], catAxes: [{ catAxisTitle: '' }] });
       if (sec) {

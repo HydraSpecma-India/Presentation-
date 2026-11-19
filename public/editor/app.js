@@ -248,15 +248,17 @@ window.HSEditor = { mount: function (opts) {
     var rhs = C.rowHeights(b, hh / PX);
     b.rows.forEach(function (r, ri) {
       var tr = el('tr', { class: ri < b.header ? 'hd' : (b.totalRow && ri === b.rows.length - 1 ? 'tot' : ''), style: 'height:' + rhs[ri] * PX + 'px' });
+      var dot = null;
       for (var c = 0; c < nc; c++) {
         var cf = C.cellFill(r[c]), v = cf.text;
         var st = cf.fill ? 'background:#' + cf.fill + ';' : '';
         if (ri >= b.header) {
           if ((b.rowBold && b.rowBold[ri]) || (b.firstColBold && c === 0)) st += 'font-weight:700;';
           if (c > 0 && C.isNumLike(v)) st += 'text-align:right;';
-          if (c === b.statusCol) { var sx = C.normStatus(v); if (sx) { v = '●'; st += 'text-align:center;color:#' + C.STATUS[sx] + ';font-size:' + Math.max(fs * 2.6, 16) + 'px;line-height:1;'; } }
+          if (c === b.statusCol) { var sx = C.normStatus(v); if (sx && +b.statusSize > 0) { v = ''; var dd = Math.min(+b.statusSize, rhs[ri] * PX * 0.9); st += 'text-align:center;'; var dot = el('span', { style: 'display:inline-block;vertical-align:middle;border-radius:50%;width:' + dd + 'px;height:' + dd + 'px;background:#' + C.STATUS[sx] }); }
+          else if (sx) { v = '●'; st += 'text-align:center;color:#' + C.STATUS[sx] + ';font-size:' + Math.max(fs * 2.6, 16) + 'px;line-height:1;'; } }
         } else if (c > 0) st += 'text-align:center;';
-        tr.appendChild(el('td', { style: st, text: v }));
+        var tdp = el('td', { style: st, text: v }); if (dot) { tdp.appendChild(dot); dot = null; } tr.appendChild(tdp);
       }
       t.appendChild(tr);
     });
@@ -762,6 +764,8 @@ window.HSEditor = { mount: function (opts) {
     hdr.addEventListener('input', function () { var v = parseInt(hdr.value, 10); if (v >= 0) { b.header = v; draw(); changed('table'); } });
     var fs = el('input', { type: 'number', step: '0.5', min: '4', max: '24', value: b.size, style: 'width:60px' });
     fs.addEventListener('input', function () { var v = parseFloat(fs.value); if (v > 0) { b.size = v; changed('table'); } });
+    var ss = el('input', { type: 'number', step: '2', min: '0', max: '72', value: b.statusSize || '', placeholder: 'auto', title: 'Status dot size in pt (empty = automatic)', style: 'width:60px' });
+    ss.addEventListener('input', function () { var v = parseFloat(ss.value); b.statusSize = v > 0 ? v : 0; changed('table'); });
     var fc = el('input', { type: 'checkbox' }); fc.checked = !!b.firstColBold; fc.addEventListener('change', function () { b.firstColBold = fc.checked; changed('table'); });
     var tr = el('input', { type: 'checkbox' }); tr.checked = !!b.totalRow; tr.addEventListener('change', function () { b.totalRow = tr.checked; changed('table'); });
     var sc = el('select', { class: 'inp', style: 'width:auto' }, [el('option', { value: '-1', text: 'none' })]);
@@ -772,7 +776,8 @@ window.HSEditor = { mount: function (opts) {
     w.appendChild(el('div', { class: 'row', style: 'flex-wrap:wrap;justify-content:flex-start;gap:12px;margin-bottom:8px' }, [
       el('label', { class: 'chk', style: 'flex:none' }, ['Header rows', hdr]), el('label', { class: 'chk', style: 'flex:none' }, ['Font', fs]),
       el('label', { class: 'chk', style: 'flex:none' }, [fc, 'Bold 1st column']), el('label', { class: 'chk', style: 'flex:none' }, [tr, 'Last row = total']),
-      el('label', { class: 'chk', style: 'flex:none' }, ['Status column (●)', sc])
+      el('label', { class: 'chk', style: 'flex:none' }, ['Status column (●)', sc]),
+      el('label', { class: 'chk', style: 'flex:none' }, ['Dot size', ss])
     ]));
     w.appendChild(grid);
     w.appendChild(el('div', { class: 'row', style: 'margin-top:6px;justify-content:flex-start;flex-wrap:wrap;gap:6px' }, [

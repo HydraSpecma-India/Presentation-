@@ -590,7 +590,7 @@
       var nc = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
       var cw = colWidths(b).map(function (f) { return +(f * box.w).toFixed(3); });
       var fs2 = +b.size || 8;
-      var rowH = rowHeights(b, hh);
+      var rowH = rowHeights(b, hh), dots = [], dotD = (+b.statusSize > 0) ? +b.statusSize / 72 : 0;
       var data = rows.map(function (r, ri) {
         var isH = ri < b.header, isTot = b.totalRow && ri === rows.length - 1, bold = !!(b.rowBold && b.rowBold[ri]);
         var cells = [];
@@ -606,7 +606,8 @@
             o.align = (c > 0 && isNumLike(v)) ? 'right' : 'left';
             if (c === b.statusCol) {
               var st = normStatus(v);
-              if (st) { v = '●'; o.color = STATUS[st]; o.fontSize = Math.max(fs2 * 2.2, 16); o.align = 'center'; }
+              if (st && dotD) { v = ''; dots.push({ r: ri, c: c, st: st }); }
+              else if (st) { v = '●'; o.color = STATUS[st]; o.fontSize = Math.max(fs2 * 2.2, 16); o.align = 'center'; }
             }
           }
           cells.push({ text: v, options: o });
@@ -614,6 +615,14 @@
         return cells;
       });
       sl.addTable(data, { x: box.x, y: y0, w: box.w, colW: cw, rowH: rowH, border: { type: 'solid', pt: 0.5, color: 'BFBFBF' }, autoPage: false });
+      dots.forEach(function (d) {
+        var cx = box.x, cy = y0, i;
+        for (i = 0; i < d.c; i++) cx += cw[i];
+        for (i = 0; i < d.r; i++) cy += rowH[i];
+        var dd = Math.min(dotD, cw[d.c] * 0.9, rowH[d.r] * 0.9);
+        sl.addShape('ellipse', { x: +(cx + (cw[d.c] - dd) / 2).toFixed(3), y: +(cy + (rowH[d.r] - dd) / 2).toFixed(3), w: +dd.toFixed(3), h: +dd.toFixed(3),
+          fill: { color: STATUS[d.st] }, line: { color: STATUS[d.st], width: 0.5 } });
+      });
     } else if (b.type === 'chart') {
       exportChart(pptx, sl, b, box);
     } else if (b.type === 'image') {

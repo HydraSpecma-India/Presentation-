@@ -227,7 +227,8 @@ window.HSEditor = { mount: function (opts) {
       if (p.k === 'b2') st += 'padding-left:' + fs * 3 + 'px;';
       if (p.k === 'b2') st += '--x:0';
       var e = el('p', { class: p.k + (empty ? ' empty' : ''), style: st + (p.color ? 'color:#' + p.color + ';' : '') + (p.big ? 'font-size:' + (fs + 2) + 'px;' : '') });
-      e.textContent = empty ? 'type here…' : (p.t || ' ');
+      if (empty) e.textContent = 'type here…';
+      else C.boldSegments(p.t || ' ').forEach(function (sg) { e.appendChild(sg.b ? el('b', { text: sg.t }) : document.createTextNode(sg.t)); });
       if (p.k === 'b2') e.style.setProperty('--ind', fs * 1.5 + 'px');
       box.appendChild(e); any = true;
     });

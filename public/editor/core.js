@@ -450,6 +450,18 @@
       return { k: 'p', t: line };
     });
   }
+  /* split "plain **bold** plain" into [{t, b}] parts; an unmatched ** stays as text */
+  function boldSegments(t) {
+    t = String(t == null ? '' : t);
+    var out = [], re = /\*\*(.+?)\*\*/g, last = 0, m;
+    while ((m = re.exec(t))) {
+      if (m.index > last) out.push({ t: t.slice(last, m.index), b: false });
+      out.push({ t: m[1], b: true });
+      last = re.lastIndex;
+    }
+    if (last < t.length || !out.length) out.push({ t: t.slice(last) || (out.length ? '' : t), b: false });
+    return out.filter(function (x, i) { return x.t !== '' || i === 0; });
+  }
   /* bullets with no text are left out of the export */
   function exportParas(text) {
     var ps = parseText(text).filter(function (p) { return !(p.k !== 'p' && p.k !== 'h' && !p.t.trim()); });
@@ -556,8 +568,16 @@
         else if (p.k === 'chk') { o.bullet = { characterCode: '2713', color: '000000', indent: Math.round(fs * 1.7) }; }
         else if (p.k === 'dot') { o.bullet = { characterCode: '2022', color: YEL, indent: Math.round(fs * 1.5) }; }
         else { o.bullet = false; }
-        return { text: p.t || ' ', options: o };
-      });
+        /* **bold** inside a line: one run per part; paragraph settings ride on the first run, the line break on the last */
+        var segs = boldSegments(p.t || ' ');
+        return segs.map(function (sg, i) {
+          var last = i === segs.length - 1;
+          var ro = i === 0 ? Object.assign({}, o) : { fontSize: o.fontSize, color: o.color, bold: o.bold };
+          ro.breakLine = last;
+          if (sg.b) ro.bold = true;
+          return { text: sg.t, options: ro };
+        });
+      }).reduce(function (a, r) { return a.concat(r); }, []);
       sl.addText(arr, Object.assign({}, box, { fontFace: 'Arial', fontSize: fs, color: '000000', valign: 'top', margin: 0.04, fit: 'shrink' }));
     } else if (b.type === 'table') {
       var rows = b.rows || [];
@@ -766,7 +786,7 @@
     W: W, H: H, YEL: YEL, PALETTE: PALETTE, STATUS: STATUS, M12: M12, MON: MON, ACN: ACN,
     uid: uid, T: T, TB: TB, CH: CH, IM: IM, S: S, COVER: COVER, END: END, blanks: blanks, blankRows: blankRows,
     TEMPLATE: TEMPLATE, newProject: newProject, SECTION_BY_TPL: SECTION_BY_TPL, sectionOf: sectionOf, sectionsFor: sectionsFor, parseNum: parseNum, chartFormat: chartFormat, fmtVal: fmtVal, seriesPct: seriesPct,
-    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, stackTotals: stackTotals, pctLabel: pctLabel, stampGeometry: stampGeometry, STAMP_COLOR: STAMP_COLOR, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
+    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, boldSegments: boldSegments, stackTotals: stackTotals, pctLabel: pctLabel, stampGeometry: stampGeometry, STAMP_COLOR: STAMP_COLOR, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
     buildPptx: buildPptx
   };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -199,6 +199,7 @@ window.HSEditor = { mount: function (opts) {
     if (b.type === 'text') d.appendChild(textPreview(b, editing));
     else if (b.type === 'table') d.appendChild(tablePreview(b));
     else if (b.type === 'chart') d.appendChild(el('div', { style: 'position:absolute;inset:0', html: chartSVG(b, b.w * PX, b.h * PX) }));
+    else if (b.type === 'kpi') d.appendChild(kpiPreview(b));
     else if (b.type === 'image') {
       if (b.src) {
         var r = b.fit === 'cover' ? null : C.fitRect(b, { x: 0, y: 0, w: b.w, h: b.h });
@@ -214,6 +215,20 @@ window.HSEditor = { mount: function (opts) {
       d.appendChild(el('div', { class: 'rz' }));
     }
     return d;
+  }
+  function kpiPreview(b) {
+    var L = C.kpiLayout(b), al = b.align === 'center' ? 'center' : 'left';
+    var card = el('div', { style: 'position:absolute;inset:0;background:#' + (b.fill || 'FFFFFF') + ';border:1px solid #d0d0d0;overflow:hidden;font-family:Arial' });
+    if (L.acc) card.appendChild(el('div', { style: 'position:absolute;left:0;top:0;bottom:0;width:' + L.acc * PX + 'px;background:#' + b.accent }));
+    var put = function (r, st, txt) {
+      card.appendChild(el('div', { style: 'position:absolute;left:' + r.x * PX + 'px;top:' + r.y * PX + 'px;width:' + r.w * PX + 'px;height:' + r.h * PX + 'px;text-align:' + al + ';' + st, text: txt }));
+    };
+    var dark = b.fill && b.fill !== 'FFFFFF' && /^[0-3]/.test(b.fill);
+    if (String(b.title || '').trim()) put(L.title, 'font-size:7.5px;line-height:' + L.title.h * PX + 'px;color:#' + (dark ? 'D9D9D9' : '595959') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis', b.title);
+    if (String(b.value || '').trim()) put(L.value, 'font-size:' + (+b.size || 16) + 'px;font-weight:700;color:#' + L.valueColor + ';display:flex;align-items:center;' + (al === 'center' ? 'justify-content:center;' : '') + 'white-space:pre-line;line-height:1.05', b.value);
+    if (L.badge) put(L.badge, 'font-size:7px;font-weight:700;background:#' + C.YEL + ';border-radius:6px;text-align:center;line-height:' + L.badge.h * PX + 'px', L.badge.text);
+    if (String(b.sub || '').trim()) put(L.sub, 'font-size:7px;line-height:1.2;color:#595959;white-space:pre-line;overflow:hidden', b.sub);
+    return card;
   }
   function textPreview(b, editing) {
     var fs = +b.size || 10;
@@ -639,6 +654,7 @@ window.HSEditor = { mount: function (opts) {
     if (b.type === 'text') return edText(b);
     if (b.type === 'table') return edTable(b);
     if (b.type === 'chart') return edChart(b);
+    if (b.type === 'kpi') return edKpi(b);
     return edImage(b);
   }
 
@@ -829,6 +845,33 @@ window.HSEditor = { mount: function (opts) {
   }
   function fldInline(label, input) { input.style.width = '150px'; return el('label', { class: 'chk', style: 'flex:none' }, [label, input]); }
 
+  /* ---------- KPI card editor ---------- */
+  function edKpi(b) {
+    var w = el('div');
+    var sub = el('textarea', { class: 'ta', rows: 3, placeholder: 'Small text under the value (Enter for a new line)' });
+    sub.value = b.sub || '';
+    sub.addEventListener('input', function () { b.sub = sub.value; changed('kpi'); });
+    var tone = el('select', { class: 'inp' }, [['', 'Black'], ['g', 'Green (good)'], ['r', 'Red (attention)'], ['y', 'Amber']].map(function (o) { return el('option', { value: o[0], text: o[1] }); }));
+    tone.value = b.tone || '';
+    tone.addEventListener('change', function () { b.tone = tone.value; changed('kpi'); });
+    var al = el('select', { class: 'inp' }, [['left', 'Left'], ['center', 'Centre']].map(function (o) { return el('option', { value: o[0], text: o[1] }); }));
+    al.value = b.align || 'left';
+    al.addEventListener('change', function () { b.align = al.value; changed('kpi'); });
+    var size = el('input', { type: 'number', step: '1', min: '7', max: '40', value: b.size || 16, style: 'width:70px' });
+    size.addEventListener('input', function () { var v = parseFloat(size.value); if (v > 0) { b.size = v; changed('kpi'); } });
+    var hex = function (key, ph) {
+      var i = el('input', { type: 'text', value: b[key] || '', placeholder: ph, style: 'width:90px' });
+      i.addEventListener('input', function () { var v = i.value.replace('#', '').trim(); if (!v || /^[0-9a-fA-F]{6}$/.test(v)) { b[key] = v.toUpperCase(); changed('kpi'); } });
+      return i;
+    };
+    w.appendChild(el('div', { class: 'row' }, [fld('Label', tInput(b, 'title', 'kpi', 'e.g. Current inventory')), fld('Value', tInput(b, 'value', 'kpi', 'e.g. ₹ 232.15 M'))]));
+    w.appendChild(el('div', { class: 'row' }, [fld('Badge (optional)', tInput(b, 'badge', 'kpi', 'e.g. 54.6%')), fld('Value colour', tone)]));
+    w.appendChild(fld('Sub text', sub));
+    w.appendChild(el('div', { class: 'row', style: 'justify-content:flex-start;gap:12px;flex-wrap:wrap' }, [
+      fldInline('Value size (pt)', size), fldInline('Align', al), fldInline('Accent bar (hex, empty = none)', hex('accent', 'FFCD00')), fldInline('Card fill (hex)', hex('fill', 'FFFFFF'))]));
+    return w;
+  }
+
   /* ---------- chart editor ---------- */
   function edChart(b) {
     var w = el('div');
@@ -966,6 +1009,7 @@ window.HSEditor = { mount: function (opts) {
     if (type === 'table') b = C.TB('Table', 0.6, 1.2, 8, 3, [['Column 1', 'Column 2', 'Column 3', 'Column 4']], C.blankRows(5, 4), { size: 9 });
     if (type === 'chart') b = C.CH('Chart', 0.6, 1.2, 6, 3, 'bar', 'Chart title', C.M12, [{ name: 'Series 1' }]);
     if (type === 'image') b = C.IM('Image', 6.9, 1.2, 5.8, 3.8);
+    if (type === 'kpi') b = C.KP('KPI card', 0.6, 1.2, 2.4, 0.9, { title: 'Label', value: '₹ 0.0 M', sub: 'Short note' });
     s.blocks.push(b); sel = b.id; changed('struct'); renderStage();
     if (type === 'image') pickImage(b);
   }

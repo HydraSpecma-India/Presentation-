@@ -136,6 +136,9 @@ export function ReportEditor({ reportId, canEdit }: { reportId: string; canEdit:
             <button className="btn sm" data-add="image" type="button">
               + Image
             </button>
+            <button className="btn sm" data-add="kpi" type="button">
+              + KPI card
+            </button>
             <span className="sp" />
             <span className="lbl" id="hint">
               Click a box to edit · drag to move · corner to resize · Del removes

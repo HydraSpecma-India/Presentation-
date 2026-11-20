@@ -63,6 +63,31 @@
       horizontal: !!o.horizontal, stacked: !!o.stacked, labels: o.labels !== false, legend: !!o.legend, arrows: !!o.arrows
     };
   }
+  function KP(label, x, y, w, h, o) {
+    o = o || {};
+    return { id: uid(), type: 'kpi', label: label, x: x, y: y, w: w, h: h, title: o.title || '', value: o.value || '', badge: o.badge || '', sub: o.sub || '',
+      tone: o.tone || '', accent: o.accent == null ? YEL : o.accent, fill: o.fill || 'FFFFFF', color: o.color || '', size: o.size || 16, align: o.align || 'left' };
+  }
+  /* KPI card geometry (inches, relative to the card) – shared by preview and export */
+  var KPI_TONE = { g: '2E7D32', r: 'C62828', y: 'BF8F00' };
+  function kpiLayout(b) {
+    var w = +b.w, h = +b.h, acc = b.accent ? 0.06 : 0, px = acc + 0.09, iw = Math.max(0.2, w - px - 0.08);
+    var vs = +b.size || 16, vh = Math.max(0.24, vs * 1.3 / 72);
+    var hasT = !!String(b.title || '').trim(), hasS = !!String(b.sub || '').trim();
+    var ty = 0.05, th = hasT ? 0.2 : 0;
+    var vy = hasT ? ty + th : 0.05;
+    if (!hasT && !hasS) vy = Math.max(0.02, (h - vh) / 2);
+    var badge = String(b.badge || '').trim(), bw = badge ? Math.max(0.42, badge.length * 0.068 + 0.14) : 0;
+    var sy = vy + vh, sh = Math.max(0.15, h - sy - 0.04);
+    return {
+      acc: acc,
+      title: { x: px, y: ty, w: iw, h: 0.2 },
+      value: { x: px, y: vy, w: Math.max(0.2, iw - (bw ? bw + 0.06 : 0)), h: vh },
+      badge: badge ? { x: w - 0.08 - bw, y: vy + (vh - 0.2) / 2, w: bw, h: 0.2, text: badge } : null,
+      sub: { x: px, y: sy, w: iw, h: sh },
+      valueColor: b.color || KPI_TONE[b.tone] || '000000'
+    };
+  }
   function IM(label, x, y, w, h) {
     return { id: uid(), type: 'image', label: label, x: x, y: y, w: w, h: h, src: null, iw: 0, ih: 0, fit: 'contain' };
   }
@@ -625,6 +650,15 @@
       });
     } else if (b.type === 'chart') {
       exportChart(pptx, sl, b, box);
+    } else if (b.type === 'kpi') {
+      var L = kpiLayout(b), ff = 'Arial', al = b.align === 'center' ? 'center' : 'left';
+      sl.addShape('rect', { x: box.x, y: box.y, w: box.w, h: box.h, fill: { color: b.fill || 'FFFFFF' }, line: { color: 'D0D0D0', width: 0.75 } });
+      if (L.acc) sl.addShape('rect', { x: box.x, y: box.y, w: L.acc, h: box.h, fill: { color: b.accent }, line: { color: b.accent, width: 0 } });
+      var at = function (r) { return { x: +(box.x + r.x).toFixed(3), y: +(box.y + r.y).toFixed(3), w: +r.w.toFixed(3), h: +r.h.toFixed(3) }; };
+      if (String(b.title || '').trim()) sl.addText(String(b.title), Object.assign(at(L.title), { fontFace: ff, fontSize: 7.5, color: b.fill && b.fill !== 'FFFFFF' && /^[0-3]/.test(b.fill) ? 'D9D9D9' : '595959', margin: 0, valign: 'middle', align: al }));
+      if (String(b.value || '').trim()) sl.addText(String(b.value), Object.assign(at(L.value), { fontFace: ff, fontSize: +b.size || 16, bold: true, color: L.valueColor, margin: 0, valign: 'middle', align: al }));
+      if (L.badge) sl.addText(L.badge.text, Object.assign(at(L.badge), { shape: pptx.ShapeType ? pptx.ShapeType.roundRect : 'roundRect', rectRadius: 0.08, fill: { color: YEL }, line: { color: YEL, width: 0 }, fontFace: ff, fontSize: 7, bold: true, color: '000000', margin: 0, align: 'center', valign: 'middle' }));
+      if (String(b.sub || '').trim()) sl.addText(String(b.sub), Object.assign(at(L.sub), { fontFace: ff, fontSize: 7, color: '595959', margin: 0, valign: 'top', align: al, paraSpaceBefore: 0 }));
     } else if (b.type === 'image') {
       if (!b.src) return;
       var r = fitRect(b, box);
@@ -797,7 +831,7 @@
 
   G.HSCore = {
     W: W, H: H, YEL: YEL, PALETTE: PALETTE, STATUS: STATUS, M12: M12, MON: MON, ACN: ACN,
-    uid: uid, T: T, TB: TB, CH: CH, IM: IM, S: S, COVER: COVER, END: END, blanks: blanks, blankRows: blankRows,
+    uid: uid, T: T, TB: TB, CH: CH, IM: IM, KP: KP, kpiLayout: kpiLayout, S: S, COVER: COVER, END: END, blanks: blanks, blankRows: blankRows,
     TEMPLATE: TEMPLATE, newProject: newProject, SECTION_BY_TPL: SECTION_BY_TPL, sectionOf: sectionOf, sectionsFor: sectionsFor, parseNum: parseNum, chartFormat: chartFormat, fmtVal: fmtVal, seriesPct: seriesPct,
     parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, boldSegments: boldSegments, stackTotals: stackTotals, pctLabel: pctLabel, stampGeometry: stampGeometry, STAMP_COLOR: STAMP_COLOR, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
     buildPptx: buildPptx

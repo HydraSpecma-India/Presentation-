@@ -75,4 +75,18 @@ describe("image handling", () => {
   it("remaps paths to a duplicated report", () => {
     expect(referencedImagePaths(remapImagePaths(sample(), "r1", "r2"))).toEqual(["r2/b2-1.png"]);
   });
+
+  it("accepts KPI card blocks", () => {
+    const p = projectSchema.parse({
+      slides: [
+        {
+          id: "s1",
+          layout: "content",
+          include: true,
+          blocks: [{ id: "k1", type: "kpi", x: 0, y: 0, w: 2, h: 1, title: "Stock", value: "₹ 1 M" }],
+        },
+      ],
+    });
+    expect(p.slides[0]!.blocks[0]!.type).toBe("kpi");
+  });
 });

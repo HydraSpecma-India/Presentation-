@@ -5,7 +5,7 @@ import { z } from "zod";
 const blockSchema = z
   .object({
     id: z.string().min(1),
-    type: z.enum(["text", "table", "chart", "image"]),
+    type: z.enum(["text", "table", "chart", "image", "kpi"]),
     x: z.number(),
     y: z.number(),
     w: z.number(),

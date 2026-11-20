@@ -609,7 +609,7 @@ window.HSEditor = { mount: function (opts) {
     } else if (s.layout === 'end') {
       if (!compact) out.push(fld('Closing text', tInput(s, 'title', 'title')));
       out.push(fld('Subtitle (yellow)', tInput(s, 'subtitle', 'title', 'e.g. Questions & discussion')));
-      var hl = el('textarea', { class: 'ta', rows: 4, placeholder: 'Up to 5 lines, each "value | label", e.g. ▲ 51% | Sales growth 2026 vs 2025' });
+      var hl = el('textarea', { class: 'ta', rows: 4, placeholder: 'Up to 6 lines, each "icon | value | label" (icon optional), e.g. 📈 | ▲ 51% | Sales growth 2026 vs 2025' });
       hl.value = s.highlights || '';
       hl.addEventListener('input', function () { s.highlights = hl.value; changed('title'); });
       out.push(fld('Key highlights', hl));

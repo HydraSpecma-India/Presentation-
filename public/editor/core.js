@@ -582,22 +582,25 @@
     return pptx;
   }
 
-  /* Closing slide: big "Thank you", yellow accent, optional subtitle, up to five highlight
-     figures ("value | label" per line) and presenter / date. Shared by preview and export (inches). */
+  /* Closing slide: big "Thank you", yellow accent, optional subtitle, up to six highlight
+     figures ("value | label" or "icon | value | label" per line) and presenter / date. Shared by preview and export (inches). */
   function endItems(s) {
     var t = s.title || 'Thank you', out = [];
     out.push({ t: t, x: 0.95, y: 1.45, w: 9.4, h: 1.15, size: t.length > 16 ? 40 : 54, bold: true, color: 'FFFFFF', valign: 'bottom' });
     out.push({ rect: true, x: 0.98, y: 2.78, w: 1.3, h: 0.07, fill: YEL });
     if (s.subtitle) out.push({ t: s.subtitle, x: 0.95, y: 2.98, w: 9.4, h: 0.5, size: 22, color: YEL });
-    var hl = String(s.highlights || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean).slice(0, 5);
+    var hl = String(s.highlights || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean).slice(0, 6);
     if (hl.length) {
-      out.push({ t: 'KEY HIGHLIGHTS', x: 0.95, y: 3.85, w: 4, h: 0.25, size: 10, bold: true, color: 'A6A6A6' });
-      var gap = 0.2, cw = (9.3 - gap * (hl.length - 1)) / hl.length;
+      /* each line: "value | label" or "icon | value | label" */
+      var n = hl.length, gap = 0.2, tw = n > 4 ? 9.9 : 9.3, cw = (tw - gap * (n - 1)) / n, vs = n > 5 ? 21 : 24;
+      out.push({ t: 'KEY HIGHLIGHTS', x: 0.95, y: 3.6, w: 4, h: 0.25, size: 10, bold: true, color: 'A6A6A6' });
       hl.forEach(function (l, i) {
-        var parts = l.split('|'), v = parts[0].trim(), lb = parts.slice(1).join('|').trim(), x = 0.95 + i * (cw + gap);
-        out.push({ rect: true, x: x, y: 4.18, w: cw, h: 0.05, fill: YEL });
-        out.push({ t: v, x: x, y: 4.3, w: cw, h: 0.55, size: 24, bold: true, color: YEL, valign: 'middle' });
-        if (lb) out.push({ t: lb, x: x, y: 4.88, w: cw, h: 0.6, size: 11, color: 'E0E0E0' });
+        var parts = l.split('|').map(function (p) { return p.trim(); }), x = 0.95 + i * (cw + gap);
+        var icon = parts.length > 2 ? parts.shift() : '', v = parts[0], lb = parts.slice(1).join(' | ');
+        if (icon) out.push({ t: icon, x: x, y: 3.86, w: cw, h: 0.3, size: 16, color: 'FFFFFF', valign: 'bottom' });
+        out.push({ rect: true, x: x, y: 4.2, w: cw, h: 0.05, fill: YEL });
+        out.push({ t: v, x: x, y: 4.3, w: cw, h: 0.55, size: vs, bold: true, color: YEL, valign: 'middle' });
+        if (lb) out.push({ t: lb, x: x, y: 4.88, w: cw, h: 0.75, size: 11, color: 'E0E0E0' });
       });
     }
     var who = [s.presenter, s.date].filter(Boolean).join('\n');

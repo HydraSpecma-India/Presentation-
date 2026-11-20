@@ -597,9 +597,12 @@
       hl.forEach(function (l, i) {
         var parts = l.split('|').map(function (p) { return p.trim(); }), x = 0.95 + i * (cw + gap);
         var icon = parts.length > 2 ? parts.shift() : '', v = parts[0], lb = parts.slice(1).join(' | ');
+        /* "#g value" / "#r value" colours that figure (and its bar) green / red instead of yellow */
+        var tone = { '#g': '92D050', '#r': 'FF6B6B' }[v.slice(0, 2).toLowerCase()], acc = tone || YEL;
+        if (tone) v = v.slice(2).trim();
         if (icon) out.push({ t: icon, x: x, y: 3.86, w: cw, h: 0.3, size: 16, color: 'FFFFFF', valign: 'bottom' });
-        out.push({ rect: true, x: x, y: 4.2, w: cw, h: 0.05, fill: YEL });
-        out.push({ t: v, x: x, y: 4.3, w: cw, h: 0.55, size: vs, bold: true, color: YEL, valign: 'middle' });
+        out.push({ rect: true, x: x, y: 4.2, w: cw, h: 0.05, fill: acc });
+        out.push({ t: v, x: x, y: 4.3, w: cw, h: 0.55, size: vs, bold: true, color: acc, valign: 'middle' });
         if (lb) out.push({ t: lb, x: x, y: 4.88, w: cw, h: 0.75, size: 11, color: 'E0E0E0' });
       });
     }

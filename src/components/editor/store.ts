@@ -30,6 +30,11 @@ function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([bytes], { type: mime });
 }
 
+/** A same-origin image path shipped in public/imports, waiting to be moved into storage. */
+function isBundledImage(src: unknown): src is string {
+  return typeof src === "string" && src.startsWith("/imports/");
+}
+
 function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
@@ -44,7 +49,7 @@ export function createReportStore(reportId: string): ReportStore {
   const supabase = supabaseBrowser();
   let version: string | null = null; // updated_at of the copy we last loaded or saved
 
-  return {
+  const store: ReportStore = {
     async load() {
       const { data, error } = await supabase
         .from("mr_reports")
@@ -55,13 +60,26 @@ export function createReportStore(reportId: string): ReportStore {
       version = data.updated_at as string;
       const project = projectSchema.parse(data.data);
       project.settings = { ...project.settings, reportName: data.title };
+      let imported = 0;
       await Promise.all(
         imageBlocks(project).map(async (b) => {
-          if (!b.img) return;
+          if (!b.img) {
+            // Images shipped with the app (e.g. slides imported from a deck): fetch them now so
+            // the save below moves them into the storage bucket like any pasted image.
+            if (isBundledImage(b.src)) {
+              const res = await fetch(b.src);
+              if (res.ok) {
+                b.src = await blobToDataUrl(await res.blob());
+                imported++;
+              }
+            }
+            return;
+          }
           const { data: file } = await supabase.storage.from(IMAGE_BUCKET).download(b.img);
           if (file) b.src = await blobToDataUrl(file);
         }),
       );
+      if (imported > 0) await store.save(project);
       return project;
     },
 
@@ -119,4 +137,5 @@ export function createReportStore(reportId: string): ReportStore {
       return { ok: true, savedAt: version };
     },
   };
+  return store;
 }

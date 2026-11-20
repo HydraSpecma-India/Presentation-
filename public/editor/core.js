@@ -772,14 +772,14 @@
       sl.addChart(CT.bar, bars.map(mk), Object.assign(base, common, {
         chartColors: bars.map(function (s) { return s.color; }), barGapWidthPct: ARROW_GAP,
         showValue: anyVal && b.labels, dataLabelPosition: 'ctr', dataLabelFontSize: 9,
-        valAxisMinVal: 0, valAxisMaxVal: arr.axisMax, layout: arr.layout
+        valAxisMinVal: arr.axisMin, valAxisMaxVal: arr.axisMax, layout: arr.layout
       }));
       var SH = pptx.ShapeType || {}, LINE = SH.line || 'line', OVAL = SH.ellipse || 'ellipse', ln = { color: '595959', width: 1.25 };
       arr.pairs.forEach(function (a) {
         sl.addShape(LINE, { x: a.x1, y: a.level, w: 0, h: a.top1 - a.level, line: ln });
         sl.addShape(LINE, { x: a.x1, y: a.level, w: a.x2 - a.x1, h: 0, line: ln });
         sl.addShape(LINE, { x: a.x2, y: a.level, w: 0, h: a.top2 - a.level, line: Object.assign({ endArrowType: 'triangle' }, ln) });
-        sl.addText(a.label, { shape: OVAL, x: a.mid - 0.33, y: a.level - 0.13, w: 0.66, h: 0.26, fill: { color: 'FFFFFF' }, line: { color: '595959', width: 1 },
+        sl.addText(a.label, { shape: OVAL, x: a.mid - a.ow / 2, y: a.level - 0.13, w: a.ow, h: 0.26, fill: { color: 'FFFFFF' }, line: { color: '595959', width: 1 },
           fontFace: 'Arial', fontSize: 9, bold: true, color: '404040', align: 'center', valign: 'middle', margin: 0 });
       });
       return;
@@ -793,7 +793,7 @@
   }
 
   /* Variance arrows (China style): an elbow arrow from bar 1 to bar 2, bar 3 to bar 4 … with the % change in an oval.
-     Only for a single-series vertical bar chart with positive values. Positions are in inches on the slide;
+     Only for a single-series vertical bar chart with at least one positive value. Positions are in inches on the slide;
      the editor preview uses the same numbers scaled to pixels. */
   var ARROW_GAP = 150;
   function arrowGeometry(b, box) {
@@ -801,13 +801,15 @@
     var s0 = b.series[0]; if (!s0 || b.series.length !== 1) return null;
     var vals = b.cats.map(function (c, i) { return parseNum(s0.values[i]); });
     var n = vals.length; if (n < 2) return null;
-    var mx = 0; vals.forEach(function (v) { if (v != null && v > mx) mx = v; });
-    if (!(mx > 0) || vals.some(function (v) { return v != null && v < 0; })) return null;
+    var mx = 0, mn = 0; vals.forEach(function (v) { if (v != null && v > mx) mx = v; if (v != null && v < mn) mn = v; });
+    if (!(mx > 0)) return null;
     var topPad = b.title ? 0.34 : 0.08, botPad = 0.3 + (b.legend ? 0.2 : 0);
     var plot = { x: box.x + box.w * 0.02, y: box.y + topPad, w: box.w * 0.96, h: Math.max(0.3, box.h - topPad - botPad) };
-    var axisMax = mx * 1.45, slot = plot.w / n;
+    /* negative values (e.g. a budgeted loss) hang below a zero line; arrows start from the zero line */
+    var axisMax = mx * 1.45, axisMin = mn < 0 ? mn * 1.3 : 0, span = axisMax - axisMin, slot = plot.w / n;
     var cx = function (i) { return plot.x + slot * (i + 0.5); };
-    var top = function (i) { return plot.y + plot.h * (1 - (vals[i] || 0) / axisMax); };
+    var yOf = function (v) { return plot.y + plot.h * (axisMax - v) / span; };
+    var top = function (i) { return yOf(Math.max(0, vals[i] || 0)); };
     var pairs = [];
     for (var i = 0; i + 1 < n; i += 2) {
       var a = vals[i], c = vals[i + 1];
@@ -815,12 +817,13 @@
       var t1 = top(i), t2 = top(i + 1);
       var level = Math.max(plot.y + 0.14, Math.min(t1, t2) - Math.max(0.2, plot.h * 0.14));
       var pct = (c - a) / Math.abs(a) * 100;
+      var lbl = (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct).toFixed(1) + '%';
       pairs.push({ x1: cx(i), x2: cx(i + 1), mid: (cx(i) + cx(i + 1)) / 2, level: level, top1: t1, top2: t2 - 0.02,
-        label: (pct > 0 ? '+' : pct < 0 ? '−' : '') + Math.abs(pct).toFixed(1) + '%' });
+        label: lbl, ow: Math.max(0.66, lbl.length * 0.115) });
     }
     if (!pairs.length) return null;
     return {
-      axisMax: axisMax, plot: plot, pairs: pairs,
+      axisMax: axisMax, axisMin: axisMin, zeroY: yOf(0), yOf: yOf, plot: plot, pairs: pairs,
       layout: { x: (plot.x - box.x) / box.w, y: (plot.y - box.y) / box.h, w: plot.w / box.w, h: plot.h / box.h }
     };
   }

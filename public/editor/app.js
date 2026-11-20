@@ -308,7 +308,7 @@ window.HSEditor = { mount: function (opts) {
       ser[0].v.forEach(function (v, i) {
         var cxp = (p0.x + sl0 * (i + 0.5)) * k;
         if (v != null) {
-          var hh = p0.h * (v / ag.axisMax) * k, yy = (p0.y + p0.h) * k - hh;
+          var yTop = ag.yOf(Math.max(0, v)) * k, yy = yTop, hh = Math.abs(ag.yOf(v) - ag.zeroY) * k;
           o.push('<rect x="' + (cxp - bw * k / 2) + '" y="' + yy + '" width="' + bw * k + '" height="' + hh + '" fill="#' + ser[0].s.color + '"/>');
           if (b.labels) o.push('<text x="' + cxp + '" y="' + (yy + hh / 2 + 3) + '" text-anchor="middle" style="font-size:9px" fill="#404040">' + esc(C.fmtVal(v, af)) + '</text>');
         }
@@ -317,7 +317,7 @@ window.HSEditor = { mount: function (opts) {
       o.push('<defs><marker id="ah' + b.id + '" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#595959"/></marker></defs>');
       ag.pairs.forEach(function (a) {
         o.push('<polyline points="' + a.x1 * k + ',' + a.top1 * k + ' ' + a.x1 * k + ',' + a.level * k + ' ' + a.x2 * k + ',' + a.level * k + ' ' + a.x2 * k + ',' + a.top2 * k + '" fill="none" stroke="#595959" stroke-width="1.2" marker-end="url(#ah' + b.id + ')"/>');
-        o.push('<ellipse cx="' + a.mid * k + '" cy="' + a.level * k + '" rx="' + 0.33 * k + '" ry="' + 0.13 * k + '" fill="#fff" stroke="#595959"/>');
+        o.push('<ellipse cx="' + a.mid * k + '" cy="' + a.level * k + '" rx="' + a.ow / 2 * k + '" ry="' + 0.13 * k + '" fill="#fff" stroke="#595959"/>');
         o.push('<text x="' + a.mid * k + '" y="' + (a.level * k + 3.5) + '" text-anchor="middle" style="font-size:9px;font-weight:700" fill="#404040">' + esc(a.label) + '</text>');
       });
       return o.join('') + '</svg>';

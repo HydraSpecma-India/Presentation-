@@ -375,7 +375,7 @@
         ]);
       })(),
       S('resources', 'Necessary Resources', [T('Resources', 0.8, 1.2, 11, 5, '- \n\n- \n\n- \n\n- \n\n- ', 12)]),
-      END('end', 'Thanks for your attention')
+      END('end', 'Thank you')
     ];
     /* keep left-edge blocks clear of the yellow corner wedge; tag each slide with its category */
     list.forEach(function (sl) {
@@ -555,7 +555,10 @@
           sl.addText([{ text: s.presenter || '', options: { breakLine: true } }, { text: s.date || '' }],
             { x: 9.0, y: 4.85, w: 3.4, h: 0.95, fontFace: 'Arial', fontSize: 18, color: 'D0D0D0', margin: 0, paraSpaceAfter: 6, valign: 'top' });
         } else {
-          sl.addText(s.title || '', { x: 0.75, y: 2.0, w: 11, h: 1.0, fontFace: 'Arial', fontSize: 34, bold: true, color: YEL, align: 'center', margin: 0 });
+          endItems(s).forEach(function (it) {
+            if (it.rect) sl.addShape(pptx.ShapeType ? pptx.ShapeType.rect : 'rect', { x: it.x, y: it.y, w: it.w, h: it.h, fill: { color: it.fill }, line: { color: it.fill } });
+            else sl.addText(it.t, { x: it.x, y: it.y, w: it.w, h: it.h, fontFace: 'Arial', fontSize: it.size, bold: !!it.bold, color: it.color, valign: it.valign || 'top', margin: 0, fit: 'shrink' });
+          });
         }
       } else {
         sl.background = { data: assets.bgContent };
@@ -577,6 +580,29 @@
       });
     });
     return pptx;
+  }
+
+  /* Closing slide: big "Thank you", yellow accent, optional subtitle, up to four highlight
+     figures ("value | label" per line) and presenter / date. Shared by preview and export (inches). */
+  function endItems(s) {
+    var t = s.title || 'Thank you', out = [];
+    out.push({ t: t, x: 0.95, y: 1.45, w: 9.4, h: 1.15, size: t.length > 16 ? 40 : 54, bold: true, color: 'FFFFFF', valign: 'bottom' });
+    out.push({ rect: true, x: 0.98, y: 2.78, w: 1.3, h: 0.07, fill: YEL });
+    if (s.subtitle) out.push({ t: s.subtitle, x: 0.95, y: 2.98, w: 9.4, h: 0.5, size: 22, color: YEL });
+    var hl = String(s.highlights || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean).slice(0, 4);
+    if (hl.length) {
+      out.push({ t: 'KEY HIGHLIGHTS', x: 0.95, y: 3.85, w: 4, h: 0.25, size: 10, bold: true, color: 'A6A6A6' });
+      var gap = 0.2, cw = (9.3 - gap * (hl.length - 1)) / hl.length;
+      hl.forEach(function (l, i) {
+        var parts = l.split('|'), v = parts[0].trim(), lb = parts.slice(1).join('|').trim(), x = 0.95 + i * (cw + gap);
+        out.push({ rect: true, x: x, y: 4.18, w: cw, h: 0.05, fill: YEL });
+        out.push({ t: v, x: x, y: 4.3, w: cw, h: 0.55, size: 24, bold: true, color: YEL, valign: 'middle' });
+        if (lb) out.push({ t: lb, x: x, y: 4.88, w: cw, h: 0.6, size: 11, color: 'E0E0E0' });
+      });
+    }
+    var who = [s.presenter, s.date].filter(Boolean).join('\n');
+    if (who) out.push({ t: who, x: 0.95, y: 6.3, w: 6, h: 0.6, size: 12, color: 'BFBFBF', valign: 'bottom' });
+    return out;
   }
 
   function exportBlock(pptx, sl, b) {
@@ -836,7 +862,7 @@
     W: W, H: H, YEL: YEL, PALETTE: PALETTE, STATUS: STATUS, M12: M12, MON: MON, ACN: ACN,
     uid: uid, T: T, TB: TB, CH: CH, IM: IM, KP: KP, kpiLayout: kpiLayout, S: S, COVER: COVER, END: END, blanks: blanks, blankRows: blankRows,
     TEMPLATE: TEMPLATE, newProject: newProject, SECTION_BY_TPL: SECTION_BY_TPL, sectionOf: sectionOf, sectionsFor: sectionsFor, parseNum: parseNum, chartFormat: chartFormat, fmtVal: fmtVal, seriesPct: seriesPct,
-    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, boldSegments: boldSegments, stackTotals: stackTotals, pctLabel: pctLabel, stampGeometry: stampGeometry, STAMP_COLOR: STAMP_COLOR, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
+    parseText: parseText, rowHeights: rowHeights, exportParas: exportParas, colWidths: colWidths, normStatus: normStatus, cellFill: cellFill, boldSegments: boldSegments, stackTotals: stackTotals, pctLabel: pctLabel, stampGeometry: stampGeometry, endItems: endItems, STAMP_COLOR: STAMP_COLOR, arrowGeometry: arrowGeometry, ARROW_GAP: ARROW_GAP, isNumLike: isNumLike, fitRect: fitRect,
     buildPptx: buildPptx
   };
 })(typeof window !== 'undefined' ? window : globalThis);

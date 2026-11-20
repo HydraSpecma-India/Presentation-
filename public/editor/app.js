@@ -185,7 +185,11 @@ window.HSEditor = { mount: function (opts) {
       root.appendChild(el('div', { style: 'position:absolute;left:54px;top:268px;font:20px Arial;color:#d0d0d0;white-space:nowrap', text: s.subtitle || '' }));
       root.appendChild(el('div', { style: 'position:absolute;left:648px;top:350px;font:18px/26px Arial;color:#d0d0d0;white-space:pre', text: (s.presenter || '') + '\n' + (s.date || '') }));
     } else if (s.layout === 'end') {
-      root.appendChild(el('div', { style: 'position:absolute;left:54px;top:144px;width:792px;height:72px;display:flex;align-items:center;justify-content:center;font:bold 34px Arial;color:#FFCD00', text: s.title || '' }));
+      C.endItems(s).forEach(function (it) {
+        var st = 'position:absolute;left:' + it.x * PX + 'px;top:' + it.y * PX + 'px;width:' + it.w * PX + 'px;height:' + it.h * PX + 'px;';
+        if (it.rect) root.appendChild(el('div', { style: st + 'background:#' + it.fill }));
+        else root.appendChild(el('div', { style: st + 'display:flex;flex-direction:column;justify-content:' + (it.valign === 'bottom' ? 'flex-end' : it.valign === 'middle' ? 'center' : 'flex-start') + ';font:' + (it.bold ? 'bold ' : '') + it.size + 'px/1.15 Arial;color:#' + it.color + ';white-space:pre-wrap;overflow:hidden', text: it.t }));
+      });
     } else {
       var ty = 0.22;
       if (s.tag) { root.appendChild(el('div', { class: 'sl-tag', style: 'left:' + 0.69 * PX + 'px;top:' + 0.14 * PX + 'px;width:' + 2 * PX + 'px;height:' + 0.26 * PX + 'px;font-size:7px', text: s.tag })); ty = 0.48; }
@@ -604,6 +608,12 @@ window.HSEditor = { mount: function (opts) {
       out.push(el('div', { class: 'row' }, [fld('Presenter', tInput(s, 'presenter', 'x')), fld('Date', tInput(s, 'date', 'x'))]));
     } else if (s.layout === 'end') {
       if (!compact) out.push(fld('Closing text', tInput(s, 'title', 'title')));
+      out.push(fld('Subtitle (yellow)', tInput(s, 'subtitle', 'title', 'e.g. Questions & discussion')));
+      var hl = el('textarea', { class: 'ta', rows: 4, placeholder: 'Up to 4 lines, each "value | label", e.g. ▲ 51% | Sales growth 2026 vs 2025' });
+      hl.value = s.highlights || '';
+      hl.addEventListener('input', function () { s.highlights = hl.value; changed('title'); });
+      out.push(fld('Key highlights', hl));
+      out.push(el('div', { class: 'row' }, [fld('Presenter', tInput(s, 'presenter', 'title')), fld('Date', tInput(s, 'date', 'title'))]));
     } else {
       if (!compact) out.push(fld('Slide header', tInput(s, 'title', 'title')));
       out.push(el('div', { class: 'row' }, [fld('Header suffix (small text)', tInput(s, 'titleSmall', 'x', 'optional')), fld('Yellow section tag', tInput(s, 'tag', 'x', 'optional'))]));

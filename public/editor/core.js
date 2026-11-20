@@ -582,14 +582,14 @@
     return pptx;
   }
 
-  /* Closing slide: big "Thank you", yellow accent, optional subtitle, up to four highlight
+  /* Closing slide: big "Thank you", yellow accent, optional subtitle, up to five highlight
      figures ("value | label" per line) and presenter / date. Shared by preview and export (inches). */
   function endItems(s) {
     var t = s.title || 'Thank you', out = [];
     out.push({ t: t, x: 0.95, y: 1.45, w: 9.4, h: 1.15, size: t.length > 16 ? 40 : 54, bold: true, color: 'FFFFFF', valign: 'bottom' });
     out.push({ rect: true, x: 0.98, y: 2.78, w: 1.3, h: 0.07, fill: YEL });
     if (s.subtitle) out.push({ t: s.subtitle, x: 0.95, y: 2.98, w: 9.4, h: 0.5, size: 22, color: YEL });
-    var hl = String(s.highlights || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean).slice(0, 4);
+    var hl = String(s.highlights || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean).slice(0, 5);
     if (hl.length) {
       out.push({ t: 'KEY HIGHLIGHTS', x: 0.95, y: 3.85, w: 4, h: 0.25, size: 10, bold: true, color: 'A6A6A6' });
       var gap = 0.2, cw = (9.3 - gap * (hl.length - 1)) / hl.length;

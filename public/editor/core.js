@@ -603,7 +603,7 @@
         if (icon) out.push({ t: icon, x: x, y: 3.86, w: cw, h: 0.3, size: 16, color: 'FFFFFF', valign: 'bottom' });
         out.push({ rect: true, x: x, y: 4.2, w: cw, h: 0.05, fill: acc });
         out.push({ t: v, x: x, y: 4.3, w: cw, h: 0.55, size: vs, bold: true, color: acc, valign: 'middle' });
-        if (lb) out.push({ t: lb, x: x, y: 4.88, w: cw, h: 0.75, size: 11, color: 'E0E0E0' });
+        if (lb) out.push({ t: lb, x: x, y: 4.88, w: cw, h: 1.15, size: 11, color: 'E0E0E0' });
       });
     }
     var who = [s.presenter, s.date].filter(Boolean).join('\n');

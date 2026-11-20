@@ -96,6 +96,14 @@ export function ReportEditor({ reportId, canEdit }: { reportId: string; canEdit:
         <button className="tb" id="bSet" type="button">
           Settings
         </button>
+        <button
+          className="tb"
+          id="bPdf"
+          type="button"
+          title="Opens the print dialog – choose “Save as PDF”"
+        >
+          Export PDF
+        </button>
         <button className="tb pri" id="bExport" type="button">
           Export PPTX
         </button>

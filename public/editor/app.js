@@ -1212,6 +1212,34 @@ window.HSEditor = { mount: function (opts) {
     }, 30);
   };
 
+  /* PDF: every included slide is drawn at full size into a print-only deck (one slide per
+     13.33 x 7.5 in page) and the browser's print dialog saves it as a PDF with real text. */
+  var pdfBtn = $('#bPdf');
+  if (pdfBtn) pdfBtn.onclick = function () {
+    var list = P.slides.filter(function (s) { return s.include; });
+    if (!list.length) { toast('No slides are included – tick at least one'); return; }
+    var old = document.getElementById('printDeck'); if (old) old.remove();
+    var deck = el('div', { id: 'printDeck' });
+    list.forEach(function (s) {
+      var pg = el('div', { class: 'pslide' }), inner = el('div', { class: 'pslide-in' });
+      inner.appendChild(slideHTML(s, 'thumb'));
+      pg.appendChild(inner); deck.appendChild(pg);
+    });
+    document.body.appendChild(deck);
+    var title = document.title, name = (P.settings.fileName || 'Management_Report') + '_' + stamp();
+    var imgs = Array.prototype.slice.call(deck.querySelectorAll('img'));
+    $('#busy').style.display = 'flex';
+    var ready = Promise.all(imgs.map(function (im) { return im.decode ? im.decode().catch(function () {}) : null; }));
+    Promise.race([ready, new Promise(function (r) { setTimeout(r, 4000); })]).then(function () {
+      $('#busy').style.display = 'none';
+      var done = function () { document.body.classList.remove('printing'); document.title = title; deck.remove(); window.removeEventListener('afterprint', done); };
+      window.addEventListener('afterprint', done);
+      document.body.classList.add('printing'); document.title = name;
+      toast('Choose “Save as PDF” as the printer – ' + list.length + ' slides', 4000);
+      setTimeout(function () { window.print(); }, 50);
+    });
+  };
+
   /* thumbs refresh in entry view on edits */
   var _changed = changed;
   changed = function (k, b) { _changed(k, b); if (view === 'entry') refreshThumbs(); };
